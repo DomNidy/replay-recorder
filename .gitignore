@@ -13,3 +13,8 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
+
+
+*.sln
+*.vcxproj
+*.vcxproj.filters
