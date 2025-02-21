@@ -1,6 +1,13 @@
 #include <iostream>
+#include "snapshot_stream.h"
+#include "base_recorder.h"
 
 int main()
 {
-    std::cout << "Hello world!" << std::endl;
+
+    SnapshotStream stream("out.txt");
+
+    BaseRecorder rec1(stream);
+
+    rec1.writeToStream("Hello world123!");
 }

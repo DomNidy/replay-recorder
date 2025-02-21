@@ -18,3 +18,5 @@ CMakeUserPresets.json
 *.sln
 *.vcxproj
 *.vcxproj.filters
+
+.vscode
