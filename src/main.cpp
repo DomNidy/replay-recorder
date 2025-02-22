@@ -1,13 +1,12 @@
 #include <iostream>
+#include "keystroke_recorder.h"
 #include "snapshot_stream.h"
-#include "base_recorder.h"
 
 int main()
 {
+    auto snapshotStream = std::make_shared<SnapshotStream>("out.txt");
 
-    SnapshotStream stream("out.txt");
+    KeystrokeRecorder keystrokeRecorder;
+    keystrokeRecorder.registerRecorder(snapshotStream);
 
-    BaseRecorder rec1(stream);
-
-    rec1.writeToStream("Hello world123!");
 }

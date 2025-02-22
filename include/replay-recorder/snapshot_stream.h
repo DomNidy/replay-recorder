@@ -29,7 +29,7 @@ class SnapshotStream
 public:
     SnapshotStream(const std::string &name)
     {
-        file.open(name, std::ios::in | std::ios::app); // Slightly more idiomatic way to open
+        file.open(name, std::ios::in | std::ios::app);
 
         if (!file.is_open())
         {
@@ -43,7 +43,7 @@ public:
     }
 
 private:
-    friend class BaseRecorder;
+    friend class KeystrokeRecorder;
     /**
      * Invoked when a recorder captures data
      */

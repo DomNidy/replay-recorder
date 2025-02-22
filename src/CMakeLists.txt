@@ -1,6 +1,7 @@
 add_executable(replay_recorder 
     main.cpp
     snapshot_stream.cpp
+    keystroke_recorder.cpp
 )
 
 target_include_directories(replay_recorder
