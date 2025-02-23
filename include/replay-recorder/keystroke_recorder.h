@@ -24,11 +24,15 @@ private:
     /**
      * Stream that we write to
      */
-    std::shared_ptr<SnapshotStream> stream;
+    static std::shared_ptr<SnapshotStream> stream;
 
 #ifdef _WIN32
+private:
     // Store the handle to the keyboard input hook
-    HHOOK hKeyboardHook;
+    static HHOOK hKeyboardHook;
+
+    // Hook procedure that
+    static LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
 #endif
 };
 
