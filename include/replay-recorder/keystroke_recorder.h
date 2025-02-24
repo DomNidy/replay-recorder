@@ -8,12 +8,33 @@
 #include <windows.h>
 #endif
 
+/**
+ * Singleton that listens for keyboard input events
+ */
 class KeystrokeRecorder : Recorder
 {
-public:
+
+private:
+    /** Implementing singleton */
     KeystrokeRecorder() {};
     ~KeystrokeRecorder() { unregisterRecorder(); }
+    static KeystrokeRecorder *instance;
 
+    /** Deleting copy constructor & assignment operator */
+    KeystrokeRecorder(const KeystrokeRecorder &) = delete;
+    KeystrokeRecorder &operator=(const KeystrokeRecorder &) = delete;
+
+public:
+    static KeystrokeRecorder *getInstance()
+    {
+        if (instance == nullptr)
+        {
+            instance = new KeystrokeRecorder();
+        }
+        return instance;
+    }
+
+public:
     virtual void registerRecorder(std::shared_ptr<SnapshotStream> targetStream) override;
     virtual void unregisterRecorder() override;
 
@@ -24,7 +45,7 @@ private:
     /**
      * Stream that we write to
      */
-    static std::shared_ptr<SnapshotStream> stream;
+    std::shared_ptr<SnapshotStream> stream;
 
 #ifdef _WIN32
 private:
@@ -33,6 +54,9 @@ private:
 
     // Hook procedure that
     static LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
+
+    // Enumerate all processes on the Windows system
+    void enumerateWindowsProcesses() const;
 #endif
 };
 

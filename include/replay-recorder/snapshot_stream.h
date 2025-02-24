@@ -63,6 +63,6 @@ private:
     /**
      * File that the SnapshotStream is being serialized to
      */
-    std::fstream file;
+    std::wfstream file;
 };
 #endif
