@@ -32,13 +32,13 @@ public:
 
     EventSink &operator<<(const char *data)
     {
-        std::cout << "Operator<< ran" << std::endl;
+        // TODO: Need to append to buffer
         std::cout << data << std::endl;
         return *this;
     }
     EventSink &operator<<(const wchar_t *data)
     {
-        std::cout << "Operator<< ran" << std::endl;
+        // TODO: Need to append to buffer
         std::wcout << data << std::endl;
         return *this;
     }

