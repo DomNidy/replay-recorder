@@ -1,11 +1,36 @@
 #include <iostream>
+#include <csignal>
 #include "user_input_event_source.h"
 #include "event_sink.h"
 #include "WinUser.h"
 
+EventSink *g_eventSink = nullptr;
+
+// Signal handler function
+void signalHandler(int signal)
+{
+    if (signal == SIGINT)
+    {
+        std::cout << "Ctrl+C detected. Performing cleanup..." << std::endl;
+
+        if (g_eventSink)
+        {
+            // Destructor makes sure data is flushed & written to file
+            delete g_eventSink;
+            g_eventSink = nullptr;
+        }
+
+        // Exit the program gracefully
+        exit(0);
+    }
+}
+
 int main()
 {
+    std::signal(SIGINT, signalHandler);
+
     EventSink eventSink = EventSink("out.txt");
+    g_eventSink = &eventSink;
 
     UserInputEventSource *keystrokeRecorder = UserInputEventSource::getInstance();
 

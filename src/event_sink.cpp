@@ -30,6 +30,9 @@ void EventSink::flushData()
 {
     if (!recordingBuffer.empty())
     {
+        std::cout << "Flushing recording buffer & writing to file\n";
+        std::cout << "Recording buffer size: " << recordingBuffer.size();
+
         file.write(recordingBuffer.data(), recordingBuffer.size());
         file.flush();
         recordingBuffer.clear();
