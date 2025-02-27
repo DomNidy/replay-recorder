@@ -6,7 +6,7 @@
 
 EventSink *g_eventSink = nullptr;
 
-// Signal handler function
+// Flush the event sink & serialize it to file
 void signalHandler(int signal)
 {
     if (signal == SIGINT)
@@ -29,11 +29,12 @@ int main()
 {
     std::signal(SIGINT, signalHandler);
 
+    // Create EventSink (receives events pertaining to the user's activity)
     EventSink eventSink = EventSink("out.txt");
     g_eventSink = &eventSink;
 
-    UserInputEventSource *keystrokeRecorder = UserInputEventSource::getInstance();
-
+    // Create EventSources to monitor user activity
+    UserInputEventSource &keystrokeRecorder = UserInputEventSource::getInstance();
     eventSink.addSource(keystrokeRecorder);
 
     BOOL ret;

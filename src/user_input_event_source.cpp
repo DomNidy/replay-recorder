@@ -7,16 +7,12 @@ bool leftAltPressed = false;
 bool tabPressed = false;
 
 /** Static variable initialization */
-UserInputEventSource *UserInputEventSource::instance = nullptr;
 HHOOK UserInputEventSource::hKeyboardHook = NULL;
 EventSink *UserInputEventSource::outputSink = nullptr;
 
-UserInputEventSource *UserInputEventSource::getInstance()
+UserInputEventSource &UserInputEventSource::getInstance()
 {
-    if (instance == nullptr)
-    {
-        instance = new UserInputEventSource();
-    }
+    static UserInputEventSource instance;
     return instance;
 }
 

@@ -15,14 +15,13 @@ private:
     /** Implementing singleton */
     UserInputEventSource() {}
     ~UserInputEventSource() { uninitializeSource(); }
-    static UserInputEventSource *instance;
 
     /** Deleting copy constructor & assignment operator */
     UserInputEventSource(const UserInputEventSource &) = delete;
     UserInputEventSource &operator=(const UserInputEventSource &) = delete;
 
 public:
-    static UserInputEventSource *getInstance();
+    static UserInputEventSource &getInstance();
 
 private:
     friend EventSink;
