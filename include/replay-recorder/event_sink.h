@@ -13,6 +13,8 @@
 #include <string>
 #include <cerrno>
 #include <memory>
+#include <codecvt>
+#include <locale>
 #include <Windows.h>
 #include "event_source.h"
 
@@ -42,5 +44,5 @@ private:
     std::vector<wchar_t> recordingBuffer;
 
     // File that we're serializing events to
-    std::wfstream file;
+    std::ofstream file;
 };

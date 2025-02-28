@@ -57,6 +57,12 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
         // Handle keyup down events
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)
         {
+
+            // TODO: This is outdated when called, also need to come up with better algorithm of doing this instead of on every keypress
+            // TODO: Don't want to do string comparisons every frame, so maybe we can hash the window title and compare the hash with
+            // TODO: the hash of the previous window title?
+            *outputSink << "[WINDOW_TITLE=" << getInstance().getActiveProcessName().data() << "]\n";
+
             // Check for ALT+TAB combo
             if (pKeyboard->vkCode == VK_LMENU)
             {
@@ -137,7 +143,23 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
 
     return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 }
+std::string UserInputEventSource::getActiveProcessName()
+{
+    // Get handle to foreground window
+    HWND hForegroundWindow = GetForegroundWindow();
+    if (!hForegroundWindow)
+    {
+        return "Unknown";
+    }
 
+    char processName[MAX_PATH] = "";
+    if (GetWindowTextA(hForegroundWindow, processName, MAX_PATH) == 0)
+    {
+        return "Unknown";
+    }
+
+    return std::string(processName);
+}
 void UserInputEventSource::initializeSource(EventSink *inSink)
 {
     outputSink = inSink;

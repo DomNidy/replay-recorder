@@ -3,7 +3,7 @@
 
 EventSink::EventSink(const std::string &name)
 {
-    file.open(name, std::ios::out | std::ios::app);
+    file.open(name, std::ios::out | std::ios::app | std::ios::binary);
 
     if (!file.is_open())
     {
@@ -65,7 +65,12 @@ inline void EventSink::_flushData()
         std::cout << "Flushing recording buffer & writing to file\n";
         std::cout << "Recording buffer size: " << recordingBuffer.size();
 
-        file.write(recordingBuffer.data(), recordingBuffer.size());
+        // Convert recording buffer's wchar_t array to an std::string so we can save to UTF-8
+        std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+        std::string text = converter.to_bytes(recordingBuffer.data(), (recordingBuffer.data() + recordingBuffer.size()));
+
+        file.write(text.data(), text.size());
+
         file.flush();
         recordingBuffer.clear();
     }

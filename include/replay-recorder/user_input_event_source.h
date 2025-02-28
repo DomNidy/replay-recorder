@@ -42,6 +42,9 @@ private:
     // Hook procedure that is executed when keyboard input is received
     static LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
 
+    // Returns the name of the process corresponding to the focused window
+    std::string getActiveProcessName();
+
     // Enumerate all processes on the Windows system
     void enumerateWindowsProcesses() const;
 };
