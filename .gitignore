@@ -20,3 +20,5 @@ CMakeUserPresets.json
 *.vcxproj.filters
 
 .vscode
+
+out.txt

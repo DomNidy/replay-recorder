@@ -148,7 +148,17 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
 
                     // Convert the input to unicode character (need to do this since the input can change based on kbd state
                     // and the keyboard layout)
-                    if (ToUnicode(pKeyboard->vkCode, pKeyboard->scanCode, keyboardState, unicodeBuffer, 2, 0) == 1)
+                    int i = 0;
+                    int rc = ToUnicode(pKeyboard->vkCode, pKeyboard->scanCode, keyboardState, unicodeBuffer, 2, 0);
+
+                    // Avoid printing control characters (this is rlly bad code fix this soon)
+                    while (i < rc && iswprint(unicodeBuffer[i]))
+                    {
+                        i++;
+                    }
+
+                    // If all of the chars were printable, then send them to output sink
+                    if (i == rc)
                     {
                         *outputSink << unicodeBuffer;
                     }

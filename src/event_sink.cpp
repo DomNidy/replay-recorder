@@ -1,9 +1,13 @@
 #include <iostream>
 #include "event_sink.h"
 
+// Utility functions
+inline bool IsHighSurrogate(wchar_t c) { return (c >= 0xD800 && c <= 0xDBFF); }
+inline bool IsLowSurrogate(wchar_t c) { return (c >= 0xDC00 && c <= 0xDFFF); }
+
 EventSink::EventSink(const std::string &name)
 {
-    file.open(name, std::ios::out | std::ios::app);
+    file.open(name, std::ios::out | std::ios::app | std::ios::binary);
 
     if (!file.is_open())
     {
@@ -20,33 +24,32 @@ EventSink::~EventSink()
     }
 }
 
-
 EventSink &EventSink::operator<<(const char *data)
 {
     // Get buffer size needed to perform the conversion
     int len = MultiByteToWideChar(CP_UTF8, 0, data, -1, nullptr, 0);
+    if (len == 0)
+    {
+        std::cerr << "Failed to calculate buffer size for UTF-8 to UTF-16 conversion: " << GetLastError() << "\n";
+        return *this;
+    }
 
     std::unique_ptr<wchar_t[]> output = std::make_unique<wchar_t[]>(len);
+    int convertResult = MultiByteToWideChar(CP_UTF8, 0, data, -1, output.get(), len); // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
+    if (convertResult == 0)
+    {
+        std::cerr << "UTF-8 to UTF-16 conversion failed: " << GetLastError() << "\n";
+        return *this;
+    }
 
-    // CAUTION: Can cause a buffer overrun because the size of the input buffer (lpMultiByteStr) equals the number of bytes in the string,
-    // while the size of the output buffer (lpWideCharStr) equals the number of characters. (But we should be fine since we're converting
-    // 1 byte chars to 2 byte chars, i.e., the output should have same or less characters.)
-    // NOTE: cbMultiByte can be set to -1 since our string(s) are null terminated (i think)
-    // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
-    int convertResult = MultiByteToWideChar(CP_UTF8, 0, data, -1, output.get(), len);
-
-    recordingBuffer.insert(recordingBuffer.end(), output.get(), (output.get() + len - 1));
+    recordingBuffer.insert(recordingBuffer.end(), output.get(), output.get() + len - 1);
     _flushIfMaxSizeExceeded();
     return *this;
 }
 
 EventSink &EventSink::operator<<(const wchar_t *data)
 {
-    size_t len = 0;
-    while (data[len] != '\0')
-    {
-        len++;
-    }
+    size_t len = wcslen(data);
 
     recordingBuffer.insert(recordingBuffer.end(), data, (data + len));
     _flushIfMaxSizeExceeded();
@@ -62,9 +65,16 @@ inline void EventSink::_flushData()
 
         // Convert recording buffer's wchar_t array to an std::string so we can save to UTF-8
         std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-        std::string text = converter.to_bytes(recordingBuffer.data(), (recordingBuffer.data() + recordingBuffer.size()));
 
-        file.write(text.data(), text.size());
+        try
+        {
+            std::string text = converter.to_bytes(recordingBuffer.data(), (recordingBuffer.data() + recordingBuffer.size()));
+            file.write(text.data(), text.size());
+        }
+        catch (const std::range_error &e)
+        {
+            std::cerr << "Error converting UTF-16 to UTF-8: " << e.what() << "\n";
+        }
 
         file.flush();
         recordingBuffer.clear();

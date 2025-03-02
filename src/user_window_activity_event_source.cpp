@@ -45,18 +45,15 @@ void CALLBACK UserWindowActivityEventSource::WinEventProc(HWINEVENTHOOK hWinEven
 
     if (event == EVENT_SYSTEM_FOREGROUND && getInstance().getWindowTitle(hWnd, windowTitle))
     {
-        if (windowTitle == "Task Switching")
+        // Special separator token, produced when focus enters and exits a window
+        if (windowTitle != "Task Switching")
         {
-            // Special separator token, produced when focus enters and exits a window
             *outputSink << "\n[WINDOW-SEP]\n";
-        }
-        else
-        {
             std::time_t now = std::time(nullptr);
             char timeStr[100];
             strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", localtime(&now));
-            *outputSink << "\n[CHANGED_TO_WINDOW=\"" << windowTitle.data() << "\"]\n";
-            *outputSink << "[TIME=\"" << timeStr << "\"]\n";
+            *outputSink << "[CHANGED_TO_WINDOW=\"" << windowTitle.data() << "\"]\n";
+            *outputSink << "[TIME=\"" << timeStr << "\"]\n\n";
         }
     }
 }
