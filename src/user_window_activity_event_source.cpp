@@ -63,7 +63,6 @@ void CALLBACK UserWindowActivityEventSource::WinEventProc(HWINEVENTHOOK hWinEven
 
 bool UserWindowActivityEventSource::getWindowTitle(HWND hWindow, std::string &destStr)
 {
-
     char processName[MAX_PATH] = "";
     if (GetWindowTextA(hWindow, processName, MAX_PATH) == 0)
     {
