@@ -1,10 +1,24 @@
 #pragma once
 
+#include <iostream>
+
+template <typename T>
 class EventSource
 {
+    friend class EventSink;
+
 public:
-    EventSource() = default;
-    virtual ~EventSource() = default;
+    static T &getInstance()
+    {
+        static T instance;
+        return instance;
+    }
+
+    EventSource()
+    {
+        std::cout << "EVENT SOURCE CONSTRUCTOR CALLED\n";
+    }
+    ~EventSource() = default;
 
     EventSource(const EventSource &) = delete;
     EventSource(EventSource &&) = delete;

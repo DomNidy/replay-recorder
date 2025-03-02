@@ -1,6 +1,7 @@
 #include <iostream>
 #include <csignal>
 #include "user_input_event_source.h"
+#include "user_window_activity_event_source.h"
 #include "event_sink.h"
 #include "WinUser.h"
 
@@ -34,8 +35,12 @@ int main()
     g_eventSink = &eventSink;
 
     // Create EventSources to monitor user activity
-    UserInputEventSource &keystrokeRecorder = UserInputEventSource::getInstance();
-    eventSink.addSource(keystrokeRecorder);
+    UserInputEventSource &inputEventSource = UserInputEventSource::getInstance();
+    UserWindowActivityEventSource &windowActivityEventSource = UserWindowActivityEventSource::getInstance();
+
+    // Add sources to sink
+    eventSink.addSource(inputEventSource);
+    eventSink.addSource(windowActivityEventSource);
 
     BOOL ret;
     MSG msg;

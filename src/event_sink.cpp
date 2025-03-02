@@ -3,7 +3,7 @@
 
 EventSink::EventSink(const std::string &name)
 {
-    file.open(name, std::ios::out | std::ios::app | std::ios::binary);
+    file.open(name, std::ios::out | std::ios::app);
 
     if (!file.is_open())
     {
@@ -20,11 +20,6 @@ EventSink::~EventSink()
     }
 }
 
-void EventSink::addSource(EventSource &source)
-{
-    std::cout << "EventSink - Added an EventSource!" << std::endl;
-    source.initializeSource(this);
-}
 
 EventSink &EventSink::operator<<(const char *data)
 {

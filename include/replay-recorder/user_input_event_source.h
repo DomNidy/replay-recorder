@@ -1,6 +1,5 @@
 #pragma once
 
-#include "event_sink.h"
 #include "event_source.h"
 #include <memory>
 #include <windows.h>
@@ -8,24 +7,16 @@
 /**
  * Singleton that records user input events (e.g., keyboard)
  */
-class UserInputEventSource : public EventSource
+class UserInputEventSource : public EventSource<UserInputEventSource>
 {
+    friend class EventSource<UserInputEventSource>;
 
 private:
     /** Implementing singleton */
-    UserInputEventSource() {}
+    UserInputEventSource() = default;
     ~UserInputEventSource() { uninitializeSource(); }
 
-    /** Deleting copy constructor & assignment operator */
-    UserInputEventSource(const UserInputEventSource &) = delete;
-    UserInputEventSource &operator=(const UserInputEventSource &) = delete;
-
-public:
-    static UserInputEventSource &getInstance();
-
 private:
-    friend EventSink;
-
     //~ Begin EventSource interface
     virtual void initializeSource(EventSink *inSink) override;
     virtual void uninitializeSource() override;
@@ -41,9 +32,6 @@ private:
 
     // Hook procedure that is executed when keyboard input is received
     static LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
-
-    // Returns the name of the process corresponding to the focused window
-    std::string getActiveProcessName();
 
     // Enumerate all processes on the Windows system
     void enumerateWindowsProcesses() const;

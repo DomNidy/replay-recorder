@@ -1,6 +1,7 @@
 #include "user_input_event_source.h"
-#include <string.h>
-#include <assert.h>
+#include "event_sink.h"
+#include <string>
+#include <cassert>
 #include <TlHelp32.h>
 
 bool leftAltPressed = false;
@@ -10,10 +11,41 @@ bool tabPressed = false;
 HHOOK UserInputEventSource::hKeyboardHook = NULL;
 EventSink *UserInputEventSource::outputSink = nullptr;
 
-UserInputEventSource &UserInputEventSource::getInstance()
+void UserInputEventSource::initializeSource(EventSink *inSink)
 {
-    static UserInputEventSource instance;
-    return instance;
+    outputSink = inSink;
+    if (outputSink == nullptr)
+    {
+        throw std::runtime_error("initializeSource called with inSink == nullptr");
+    }
+
+    // We need to get a handle to the module (a loaded .dll or .exe) that contains the hook procedure code
+    // Since the hook proc code will exist in the same binary file, we set the module name to null here
+    // which returns a handle to the file used to create the calling process (calling process is our app)
+    HMODULE hMod = GetModuleHandle(NULL);
+
+    // Install the hook
+    hKeyboardHook = SetWindowsHookEx(
+        WH_KEYBOARD_LL,
+        KeyboardProc,
+        hMod,
+        0);
+
+    if (!hKeyboardHook)
+    {
+        throw std::runtime_error("Failed to register keyboard hook: " + std::to_string(GetLastError()));
+    }
+
+    std::cout << "UserInputEventSource successfully installed keyboard hook" << std::endl;
+}
+
+void UserInputEventSource::uninitializeSource()
+{
+    assert(hKeyboardHook != NULL);
+
+    UnhookWindowsHookEx(hKeyboardHook);
+    hKeyboardHook = NULL;
+    std::cout << "UserInputEventSource successfully uninstalled keyboard hook" << std::endl;
 }
 
 bool HandleSpecialKey(int vkCode, EventSink *outputSink)
@@ -57,11 +89,6 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
         // Handle keyup down events
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)
         {
-
-            // TODO: This is outdated when called, also need to come up with better algorithm of doing this instead of on every keypress
-            // TODO: Don't want to do string comparisons every frame, so maybe we can hash the window title and compare the hash with
-            // TODO: the hash of the previous window title?
-            *outputSink << "[WINDOW_TITLE=" << getInstance().getActiveProcessName().data() << "]\n";
 
             // Check for ALT+TAB combo
             if (pKeyboard->vkCode == VK_LMENU)
@@ -142,54 +169,4 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
     }
 
     return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
-}
-std::string UserInputEventSource::getActiveProcessName()
-{
-    // Get handle to foreground window
-    HWND hForegroundWindow = GetForegroundWindow();
-    if (!hForegroundWindow)
-    {
-        return "Unknown";
-    }
-
-    char processName[MAX_PATH] = "";
-    if (GetWindowTextA(hForegroundWindow, processName, MAX_PATH) == 0)
-    {
-        return "Unknown";
-    }
-
-    return std::string(processName);
-}
-void UserInputEventSource::initializeSource(EventSink *inSink)
-{
-    outputSink = inSink;
-    assert(outputSink != nullptr);
-
-    // We need to get a handle to the module (a loaded .dll or .exe) that contains the hook procedure code
-    // Since the hook proc code will exist in the same binary file, we set the module name to null here
-    // which returns a handle to the file used to create the calling process (calling process is our app)
-    HMODULE hMod = GetModuleHandle(NULL);
-
-    // Install the hook
-    hKeyboardHook = SetWindowsHookEx(
-        WH_KEYBOARD_LL,
-        KeyboardProc,
-        hMod,
-        0);
-
-    if (!hKeyboardHook)
-    {
-        throw std::runtime_error("Failed to register keyboard hook: " + std::to_string(GetLastError()));
-    }
-
-    std::cout << "UserInputEventSource successfully installed keyboard hook" << std::endl;
-}
-
-void UserInputEventSource::uninitializeSource()
-{
-    assert(hKeyboardHook != nullptr);
-
-    UnhookWindowsHookEx(hKeyboardHook);
-    hKeyboardHook = NULL;
-    std::cout << "UserInputEventSource successfully uninstalled keyboard hook" << std::endl;
 }

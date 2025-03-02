@@ -1,13 +1,10 @@
 #pragma once
 
 #include <fstream>
-#include <string>
-#include <cerrno>
 #include <cstring>
 #include <cstdint>
 #include <iostream>
 #include <vector>
-#include <fstream>
 #include <stdexcept>
 #include <assert.h>
 #include <string>
@@ -19,7 +16,7 @@
 #include "event_source.h"
 
 // Cause buffer recording buffer to flush & write to file upon reaching this size
-#define MAX_RECORDING_BUFFER_SIZE 10000
+constexpr size_t MAX_RECORDING_BUFFER_SIZE = 10000;
 
 class EventSink
 {
@@ -31,7 +28,8 @@ public:
     EventSink &operator<<(const wchar_t *data);
 
     // Add a source to receive events from (e.g., user input events)
-    void addSource(EventSource &source);
+    template <typename T>
+    void addSource(EventSource<T> &source);
 
 private:
     // Checks buffer size and calls _flushData() it if its too big
@@ -46,3 +44,9 @@ private:
     // File that we're serializing events to
     std::ofstream file;
 };
+
+template <typename T>
+void EventSink::addSource(EventSource<T> &source)
+{
+    source.initializeSource(this);
+}
