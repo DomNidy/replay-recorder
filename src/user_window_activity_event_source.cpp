@@ -1,6 +1,7 @@
 #include "user_window_activity_event_source.h"
 #include "event_sink.h"
 #include <ctime>
+#include <sstream>
 
 EventSink *UserWindowActivityEventSource::outputSink = nullptr;
 
@@ -48,12 +49,14 @@ void CALLBACK UserWindowActivityEventSource::WinEventProc(HWINEVENTHOOK hWinEven
         // Special separator token, produced when focus enters and exits a window
         if (windowTitle != "Task Switching")
         {
-            *outputSink << "\n[WINDOW-SEP]\n";
             std::time_t now = std::time(nullptr);
             char timeStr[100];
             strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", localtime(&now));
-            *outputSink << "[CHANGED_TO_WINDOW=\"" << windowTitle.data() << "\"]\n";
-            *outputSink << "[TIME=\"" << timeStr << "\"]\n\n";
+
+            std::ostringstream oss;
+            oss << "[CHANGED_TO_WINDOW=\"" << windowTitle << "\"]\n"
+                << "[TIME=\"" << timeStr << "\"]\n\n";
+            *outputSink << oss.str().data();
         }
     }
 }

@@ -16,7 +16,7 @@
 #include "event_source.h"
 
 // Cause buffer recording buffer to flush & write to file upon reaching this size
-constexpr size_t MAX_RECORDING_BUFFER_SIZE = 10000;
+constexpr size_t MAX_RECORDING_BUFFER_SIZE = 1500;
 
 class EventSink
 {

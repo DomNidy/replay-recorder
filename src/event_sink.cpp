@@ -8,7 +8,7 @@ inline bool IsLowSurrogate(wchar_t c) { return (c >= 0xDC00 && c <= 0xDFFF); }
 EventSink::EventSink(const std::string &name)
 {
     file.open(name, std::ios::out | std::ios::app | std::ios::binary);
-
+    std::cout << "MAX BUFF SIZE: " << MAX_RECORDING_BUFFER_SIZE << "\n";
     if (!file.is_open())
     {
         throw std::runtime_error("Failed to open output file for EventSink - " + name + ", " + std::strerror(errno));

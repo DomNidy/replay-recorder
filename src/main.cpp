@@ -31,16 +31,16 @@ int main()
     std::signal(SIGINT, signalHandler);
 
     // Create EventSink (receives events pertaining to the user's activity)
-    EventSink eventSink = EventSink("out.txt");
-    g_eventSink = &eventSink;
+    EventSink *eventSink = new EventSink("out.txt");
+    g_eventSink = eventSink;
 
     // Create EventSources to monitor user activity
     UserInputEventSource &inputEventSource = UserInputEventSource::getInstance();
     UserWindowActivityEventSource &windowActivityEventSource = UserWindowActivityEventSource::getInstance();
 
     // Add sources to sink
-    eventSink.addSource(inputEventSource);
-    eventSink.addSource(windowActivityEventSource);
+    eventSink->addSource(inputEventSource);
+    eventSink->addSource(windowActivityEventSource);
 
     BOOL ret;
     MSG msg;
