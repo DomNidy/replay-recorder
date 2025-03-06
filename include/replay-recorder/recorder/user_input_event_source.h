@@ -1,8 +1,9 @@
 #pragma once
 
-#include "event_source.h"
+#include <windows.h> // make sure to include windows.h before TlHelp32.h
+#include <TlHelp32.h>
 #include <memory>
-#include <windows.h>
+#include "event_source.h"
 
 /**
  * Singleton that records user input events (e.g., keyboard)

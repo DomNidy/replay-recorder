@@ -1,5 +1,5 @@
-#include "user_window_activity_event_source.h"
-#include "event_sink.h"
+#include "recorder/user_window_activity_event_source.h"
+#include "recorder/event_sink.h"
 #include <ctime>
 #include <sstream>
 
@@ -51,11 +51,10 @@ void CALLBACK UserWindowActivityEventSource::WinEventProc(HWINEVENTHOOK hWinEven
         {
             std::time_t now = std::time(nullptr);
             char timeStr[100];
-            strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", localtime(&now));
+            strftime(timeStr, sizeof(timeStr), "%Y%m%d%H%M%S", localtime(&now));
 
             std::ostringstream oss;
-            oss << "[CHANGED_TO_WINDOW=\"" << windowTitle << "\"]\n"
-                << "[TIME=\"" << timeStr << "\"]\n\n";
+            oss << "\n[CHANGE WINDOW: \"" << windowTitle << "\", TIMESTAMP: " << timeStr << "]\n";
             *outputSink << oss.str().data();
         }
     }

@@ -1,5 +1,5 @@
 #include <iostream>
-#include "event_sink.h"
+#include "recorder/event_sink.h"
 
 // Utility functions
 inline bool IsHighSurrogate(wchar_t c) { return (c >= 0xD800 && c <= 0xDBFF); }
@@ -61,7 +61,7 @@ inline void EventSink::_flushData()
     if (!recordingBuffer.empty())
     {
         std::cout << "Flushing recording buffer & writing to file\n";
-        std::cout << "Recording buffer size: " << recordingBuffer.size();
+        std::cout << "Recording buffer size: " << recordingBuffer.size() << "\n";
 
         // Convert recording buffer's wchar_t array to an std::string so we can save to UTF-8
         std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;

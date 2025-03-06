@@ -1,8 +1,8 @@
 #pragma once
 
+#include "recorder/event_source.h"
 #include <windows.h>
 #include <string>
-#include "event_source.h"
 
 class UserWindowActivityEventSource : public EventSource<UserWindowActivityEventSource>
 {
