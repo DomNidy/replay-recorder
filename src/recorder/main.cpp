@@ -1,9 +1,9 @@
 #include <windows.h>
 #include <iostream>
 #include <csignal>
-#include "recorder/user_input_event_source.h"
-#include "recorder/user_window_activity_event_source.h"
-#include "recorder/event_sink.h"
+#include "user_input_event_source.h"
+#include "user_window_activity_event_source.h"
+#include "event_sink.h"
 
 EventSink *g_eventSink = nullptr;
 

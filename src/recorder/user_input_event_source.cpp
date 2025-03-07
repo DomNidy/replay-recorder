@@ -1,7 +1,7 @@
 #include <cassert>
 #include <string>
-#include "recorder/user_input_event_source.h"
-#include "recorder/event_sink.h"
+#include "user_input_event_source.h"
+#include "event_sink.h"
 
 bool leftAltPressed = false;
 bool tabPressed = false;

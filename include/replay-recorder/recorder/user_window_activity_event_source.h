@@ -1,6 +1,6 @@
 #pragma once
 
-#include "recorder/event_source.h"
+#include "event_source.h"
 #include <windows.h>
 #include <string>
 

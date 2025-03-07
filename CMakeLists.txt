@@ -11,4 +11,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 enable_testing()
 
 add_subdirectory(src/recorder)
+add_subdirectory(src/encoder)
 add_subdirectory(tests)
+
+# Global include dir
+include_directories("${CMAKE_SOURCE_DIR}/include")

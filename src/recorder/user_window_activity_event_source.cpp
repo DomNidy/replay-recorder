@@ -1,5 +1,5 @@
-#include "recorder/user_window_activity_event_source.h"
-#include "recorder/event_sink.h"
+#include "user_window_activity_event_source.h"
+#include "event_sink.h"
 #include <ctime>
 #include <sstream>
 

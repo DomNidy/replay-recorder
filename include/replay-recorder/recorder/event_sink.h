@@ -41,7 +41,7 @@ private:
     // Vector of buffered data
     std::vector<wchar_t> recordingBuffer;
 
-    // File that we're serializing events to
+    // File that we're serializing user activity related events to
     std::ofstream file;
 };
 

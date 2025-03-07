@@ -1,9 +1,5 @@
 #include <iostream>
-#include "recorder/event_sink.h"
-
-// Utility functions
-inline bool IsHighSurrogate(wchar_t c) { return (c >= 0xD800 && c <= 0xDBFF); }
-inline bool IsLowSurrogate(wchar_t c) { return (c >= 0xDC00 && c <= 0xDFFF); }
+#include "event_sink.h"
 
 EventSink::EventSink(const std::string &name)
 {

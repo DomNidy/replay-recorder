@@ -1,4 +1,4 @@
-add_executable(replay_recorder 
+add_executable(replay_recorder
     main.cpp
     event_sink.cpp
     user_input_event_source.cpp
@@ -6,6 +6,6 @@ add_executable(replay_recorder
 )
 
 target_include_directories(replay_recorder
-    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../include/replay-recorder/"
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../include/replay-recorder/recorder"
 )
 
