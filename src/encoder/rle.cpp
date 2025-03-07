@@ -10,6 +10,7 @@ namespace RP::Encoder
         size_t i = 0;
         while (i < userActivityString.size())
         {
+            // Check for start token ('[') and make sure it's not escaped
             if (userActivityString[i] == '[' && (i == 0 || userActivityString[i - 1] != '\\'))
             {
                 // Parse the token
@@ -80,11 +81,12 @@ namespace RP::Encoder
         // Flush any remaining token after processing all characters
         if (!prevToken.empty())
         {
-            output += "[" + prevToken + "]";
+            output += "[" + prevToken;
             if (repeatCount > 0)
             {
-                output += "{" + std::to_string(repeatCount + 1) + "}";
+                output += "x" + std::to_string(repeatCount + 1);
             }
+            output += "]";
         }
 
         return output;
