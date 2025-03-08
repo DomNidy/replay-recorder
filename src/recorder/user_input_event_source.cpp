@@ -137,7 +137,6 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam,
           int len = ToUnicode(pKeyboard->vkCode, pKeyboard->scanCode,
                               keyboardState, unicodeBuffer, 2, 0);
 
-          std::cout << "Len: " << len << "\n";
           // iswprint checks if this is printable ascii character.
           // printing control characters (this is rlly bad code fix this soon)
           while (i < len && iswprint(unicodeBuffer[i])) {
