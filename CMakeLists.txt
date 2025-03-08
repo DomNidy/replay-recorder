@@ -12,7 +12,8 @@ enable_testing()
 
 add_subdirectory(src/recorder)
 add_subdirectory(src/encoder)
-add_subdirectory(tests)
+add_subdirectory(src/tests)
 
 # Global include dir
 include_directories("${CMAKE_SOURCE_DIR}/include")
+

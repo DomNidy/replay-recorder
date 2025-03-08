@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "recorder/event_sink.h"
+#include "replay/recorder/event_sink.h"
 
 class EventSinkTest : public ::testing::Test
 {
