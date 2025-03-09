@@ -8,7 +8,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        CACHE STRING "Vcpkg toolchain file")
+endif()
+message(STATUS "Using CMake toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
+
 enable_testing()
+
+find_package(spdlog CONFIG REQUIRED)
 
 # Global include dir
 include_directories("${CMAKE_SOURCE_DIR}/include")

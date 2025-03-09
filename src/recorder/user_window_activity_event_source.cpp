@@ -1,6 +1,7 @@
 #include "user_window_activity_event_source.h"
 
 #include <ctime>
+#include <spdlog/spdlog.h>
 #include <sstream>
 
 #include "event_sink.h"
@@ -121,6 +122,8 @@ void UserWindowActivityEventSource::initializeSource(EventSink *inSink)
     {
         throw std::runtime_error("Failed to install window event hook: " + std::to_string(GetLastError()));
     }
+
+    spdlog::info("UserWindowActivityEventSource successfully installed keyboard hook");
 }
 
 void UserWindowActivityEventSource::uninitializeSource()
@@ -129,9 +132,7 @@ void UserWindowActivityEventSource::uninitializeSource()
 
     UnhookWinEvent(hWinEventHook);
     hWinEventHook = NULL;
-    std::cout << "UserWindowActivityEventSource successfully uninstalled window "
-                 "event hook"
-              << std::endl;
+    spdlog::info("UserWindowActivityEventSource successfully uninstalled window event hook");
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wineventproc

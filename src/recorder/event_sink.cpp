@@ -1,11 +1,12 @@
 #include "replay/recorder/event_sink.h"
+#include <spdlog/spdlog.h>
 
 #include <iostream>
 
 EventSink::EventSink(const std::string &name)
 {
     file.open(name, std::ios::out | std::ios::app | std::ios::binary);
-    std::cout << "MAX BUFF SIZE: " << MAX_RECORDING_BUFFER_SIZE << "\n";
+    spdlog::info("Max recording buffer size: {}", MAX_RECORDING_BUFFER_SIZE);
     if (!file.is_open())
     {
         throw std::runtime_error("Failed to open output file for EventSink - " + name + ", " + std::strerror(errno));
@@ -27,7 +28,7 @@ EventSink &EventSink::operator<<(const char *data)
     int len = MultiByteToWideChar(CP_UTF8, 0, data, -1, nullptr, 0);
     if (len == 0)
     {
-        std::cerr << "Failed to calculate buffer size for UTF-8 to UTF-16 conversion: " << GetLastError() << "\n";
+        spdlog::error("Failed to calculate buffer size for UTF-8 to UTF-16 conversion: {}", GetLastError());
         return *this;
     }
 
@@ -37,7 +38,7 @@ EventSink &EventSink::operator<<(const char *data)
         len); // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
     if (convertResult == 0)
     {
-        std::cerr << "UTF-8 to UTF-16 conversion failed: " << GetLastError() << "\n";
+        spdlog::error("UTF-8 to UTF-16 conversion failed: {}", GetLastError());
         return *this;
     }
 
@@ -59,8 +60,8 @@ inline void EventSink::_flushData()
 {
     if (!recordingBuffer.empty())
     {
-        std::cout << "Flushing recording buffer & writing to file\n";
-        std::cout << "Recording buffer size: " << recordingBuffer.size() << "\n";
+        spdlog::info("Flushing recording buffer & writing to file");
+        spdlog::info("Recording buffer size: {}", recordingBuffer.size());
 
         // Convert recording buffer's wchar_t array to an std::string so we can
         // save to UTF-8
@@ -74,7 +75,7 @@ inline void EventSink::_flushData()
         }
         catch (const std::range_error &e)
         {
-            std::cerr << "Error converting UTF-16 to UTF-8: " << e.what() << "\n";
+            spdlog::error("Error converting UTF-16 to UTF-8: {}", e.what());
         }
 
         file.flush();

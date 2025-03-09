@@ -1,7 +1,9 @@
 #include "user_input_event_source.h"
 
 #include <cassert>
+#include <spdlog/spdlog.h>
 #include <string>
+
 
 #include "event_sink.h"
 
@@ -34,7 +36,7 @@ void UserInputEventSource::initializeSource(EventSink *inSink)
         throw std::runtime_error("Failed to register keyboard hook: " + std::to_string(GetLastError()));
     }
 
-    std::cout << "UserInputEventSource successfully installed keyboard hook" << std::endl;
+    spdlog::info("UserInputEventSource successfully installed keyboard hook");
 }
 
 void UserInputEventSource::uninitializeSource()
@@ -43,7 +45,7 @@ void UserInputEventSource::uninitializeSource()
 
     UnhookWindowsHookEx(hKeyboardHook);
     hKeyboardHook = NULL;
-    std::cout << "UserInputEventSource successfully uninstalled keyboard hook" << std::endl;
+    spdlog::info("UserInputEventSource successfully uninstalled keyboard hook");
 }
 
 bool handleSpecialkey(int vkCode, EventSink *outputSink)
