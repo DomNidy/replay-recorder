@@ -4,7 +4,7 @@
 class EventSinkTest : public ::testing::Test
 {
 
-protected:
+  protected:
     int example_test()
     {
         return 2;

@@ -1,4 +1,4 @@
-BasedOnStyle: Google
+BasedOnStyle: Microsoft
 IncludeCategories:
   - Regex: '^<windows\.h>$'
     Priority: 1

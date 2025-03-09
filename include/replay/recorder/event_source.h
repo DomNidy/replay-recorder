@@ -12,7 +12,7 @@ class EventSource {
     return instance;
   }
 
-  EventSource() { std::cout << "EVENT SOURCE CONSTRUCTOR CALLED\n"; }
+  EventSource() {}
   ~EventSource() = default;
 
   EventSource(const EventSource &) = delete;
