@@ -126,7 +126,6 @@ inline std::string _rle_character_tokens(const std::string &userActivityString)
 
             // copy the contents of special token into output str
             output += userActivityString.substr(i, k + 1);
-            std::cout << "of len " << k << "\n";
             // update i to first char after closing token
             i = i + k + 1;
             continue;

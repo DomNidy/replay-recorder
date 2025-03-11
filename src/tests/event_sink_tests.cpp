@@ -1,19 +1,12 @@
 #include <gtest/gtest.h>
-#include "recorder/recorder.h"
 
 class EventSinkTest : public ::testing::Test
 {
-
-  protected:
-    int example_test()
-    {
-        return 2;
-    }
 };
 
-TEST_F(EventSinkTest, EventSinkTest_HelloWorld)
+TEST(EventSinkTest, HelloWorld)
 {
-    EXPECT_EQ(example_test(), 2);
+    EXPECT_EQ(2, 2);
 }
 
 int main(int argc, char **argv)
