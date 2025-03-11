@@ -1,4 +1,4 @@
-#include "encoder/encoder.h"
+#include "encoder.h"
 
 inline std::string _rle_special_tokens(const std::string &userActivityString);
 inline std::string _rle_character_tokens(const std::string &userActivityString);
