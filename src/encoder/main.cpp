@@ -5,19 +5,24 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "encoder.h"
+#include "encoder/encoder.h"
 
 int main(int argc, char *argv[])
 {
     // Validate command-line arguments.
     if (argc < 2 || argc > 3)
     {
-        std::cerr << "Usage: " << argv[0] << " <input_file> [output_file]\n";
+        std::filesystem::path encPath(argv[0]);
+
+        std::cerr << "Usage: \n"
+                  << encPath.stem().generic_string() << " <input_file> [output_file] [option]...\n\n"
+                  << "Options:\n"
+                  << "\t--remove-special\t Removes special tokens.\n";
         return 1;
     }
     std::string inputFilePath = argv[1];
     std::string outputFilePath;
-    if (argc == 3)
+    if (argc >= 3)
     {
         outputFilePath = argv[2];
     }

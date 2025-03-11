@@ -12,11 +12,12 @@
 //      the more "noise" an LLM be forced to consider while making token
 //      predictions. In other words, the entropy of the softmax probabilities
 //      will be slightly higher resulting in more "random" response from models.
-namespace RP::Encoder {
-/// @brief Performs RLE on a user activity string, focusing on reducing special
-/// token count (e.g., '[LSHIFT]')
+namespace RP::Encoder
+{
+/// @brief Performs RLE on a user activity string, encodes special
+/// tokens (e.g., '[LSHIFT]') and character tokens.
 /// @param recordingString String produced by a recording. Contains all of the
 /// user activity related events.
 /// @return A RLE'd version of the string that is smaller.
 std::string rle(const std::string &userActivityString);
-}  // namespace RP::Encoder
+} // namespace RP::Encoder

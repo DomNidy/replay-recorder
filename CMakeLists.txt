@@ -18,11 +18,13 @@ enable_testing()
 
 find_package(spdlog CONFIG REQUIRED)
 
-# Global include dir
-include_directories("${CMAKE_SOURCE_DIR}/include")
+# Create interface library to propogate options to them
+# Note: Interface libraries dont produce any binary, its for propagating usage requirements
+add_library(project_options INTERFACE)
+target_include_directories(project_options INTERFACE "${PROJECT_SOURCE_DIR}/include")
 
+add_subdirectory(libs)
 add_subdirectory(src/recorder)
 add_subdirectory(src/encoder)
 add_subdirectory(src/tests)
-
 

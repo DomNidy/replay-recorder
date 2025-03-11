@@ -4,5 +4,6 @@ add_executable(replay_encoder
 )
 
 target_include_directories(replay_encoder
-    PRIVATE "${PROJECT_SOURCE_DIR}/include/replay/encoder/"
+    # PUBLIC "${PROJECT_SOURCE_DIR}/include/encoder"
+    PRIVATE project_options
 )
