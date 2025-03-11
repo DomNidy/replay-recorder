@@ -26,5 +26,5 @@ enable_testing()
 add_subdirectory(libs)
 add_subdirectory(src/recorder)
 add_subdirectory(src/encoder)
-add_subdirectory(src/tests)
+add_subdirectory(tests)
 
