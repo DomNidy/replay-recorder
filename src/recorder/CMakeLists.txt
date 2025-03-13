@@ -3,6 +3,7 @@ add_library(recorder_lib STATIC
     event_sink.cpp
     user_input_event_source.cpp
     user_window_activity_event_source.cpp
+    screenshot_event_source.cpp
 )
 
 target_include_directories(recorder_lib

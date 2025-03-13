@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "event_sink.h"
+#include "screenshot_event_source.h"
 #include "spdlog/spdlog.h"
 #include "user_input_event_source.h"
 #include "user_window_activity_event_source.h"
@@ -32,7 +33,7 @@ void signalHandler(int signal)
 int main(int argc, char **argv)
 {
     std::signal(SIGINT, signalHandler);
-    
+
     // Create EventSink (receives events pertaining to the user's activity)
     EventSink *eventSink = new EventSink("out.txt");
     g_eventSink = eventSink;
@@ -40,10 +41,12 @@ int main(int argc, char **argv)
     // Create EventSources to monitor user activity
     UserInputEventSource &inputEventSource = UserInputEventSource::getInstance();
     UserWindowActivityEventSource &windowActivityEventSource = UserWindowActivityEventSource::getInstance();
+    ScreenshotEventSource &screenshotEventSource = ScreenshotEventSource::getInstance();
 
     // Add sources to sink
     eventSink->addSource(inputEventSource);
     eventSink->addSource(windowActivityEventSource);
+    eventSink->addSource(screenshotEventSource);
 
     BOOL ret;
     MSG msg;

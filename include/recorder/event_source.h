@@ -2,30 +2,36 @@
 
 #include <iostream>
 
-template <typename T>
-class EventSource {
-  friend class EventSink;
+#define RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK                                                                     \
+    "initializeSource() was called with inSink == nullptr, Need an EventSink to initalize a source!"
 
- public:
-  static T &getInstance() {
-    static T instance;
-    return instance;
-  }
+template <typename T> class EventSource
+{
+    friend class EventSink;
 
-  EventSource() {}
-  ~EventSource() = default;
+  public:
+    static T &getInstance()
+    {
+        static T instance;
+        return instance;
+    }
 
-  EventSource(const EventSource &) = delete;
-  EventSource(EventSource &&) = delete;
-  EventSource &operator=(const EventSource &) = delete;
-  EventSource &operator=(EventSource &&) = delete;
+    EventSource()
+    {
+    }
+    ~EventSource() = default;
 
- private:
-  friend class EventSink;
+    EventSource(const EventSource &) = delete;
+    EventSource(EventSource &&) = delete;
+    EventSource &operator=(const EventSource &) = delete;
+    EventSource &operator=(EventSource &&) = delete;
 
-  /**
-   * Called by EventSink to add an EventSource
-   */
-  virtual void initializeSource(class EventSink *inSink) = 0;
-  virtual void uninitializeSource() = 0;
+  private:
+    friend class EventSink;
+
+    /**
+     * Called by EventSink to add an EventSource
+     */
+    virtual void initializeSource(class EventSink *inSink) = 0;
+    virtual void uninitializeSource() = 0;
 };

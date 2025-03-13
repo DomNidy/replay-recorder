@@ -108,7 +108,7 @@ void UserWindowActivityEventSource::initializeSource(EventSink *inSink)
     outputSink = inSink;
     if (outputSink == nullptr)
     {
-        throw std::runtime_error("initializeSource called with inSink == nullptr");
+        throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
 
     // Add windows hook

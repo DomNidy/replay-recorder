@@ -4,7 +4,6 @@
 #include <spdlog/spdlog.h>
 #include <string>
 
-
 #include "event_sink.h"
 
 bool leftAltPressed = false;
@@ -19,7 +18,7 @@ void UserInputEventSource::initializeSource(EventSink *inSink)
     outputSink = inSink;
     if (outputSink == nullptr)
     {
-        throw std::runtime_error("initializeSource called with inSink == nullptr");
+        throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
 
     // We need to get a handle to the module (a loaded .dll or .exe) that contains
