@@ -5,17 +5,11 @@
 #define RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK                                                                     \
     "initializeSource() was called with inSink == nullptr, Need an EventSink to initalize a source!"
 
-template <typename T> class EventSource
+class EventSource
 {
     friend class EventSink;
 
   public:
-    static T &getInstance()
-    {
-        static T instance;
-        return instance;
-    }
-
     EventSource()
     {
     }
@@ -28,7 +22,6 @@ template <typename T> class EventSource
 
   private:
     friend class EventSink;
-
     /**
      * Called by EventSink to add an EventSource
      */

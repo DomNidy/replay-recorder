@@ -28,16 +28,17 @@ class ScreenshotEventSourceConfig
     void validate();
 };
 
-class ScreenshotEventSource : public EventSource<ScreenshotEventSource>
+class ScreenshotEventSource : public EventSource
 {
-    friend class EventSource<ScreenshotEventSource>;
 
   public:
+    ScreenshotEventSource();
+    ScreenshotEventSource(ScreenshotEventSourceConfig config);
+    
     // Returns the instance with the specified configuration.
     void setConfig(ScreenshotEventSourceConfig config);
 
   private:
-    ScreenshotEventSource() = default;
     ~ScreenshotEventSource()
     {
         uninitializeSource();
@@ -48,7 +49,7 @@ class ScreenshotEventSource : public EventSource<ScreenshotEventSource>
     virtual void uninitializeSource() override;
 
   private:
-    static EventSink *outputSink;
+    EventSink *outputSink;
 
     // Configures screenshot-related settings and behavior (like interval and output dir)
     ScreenshotEventSourceConfig config;

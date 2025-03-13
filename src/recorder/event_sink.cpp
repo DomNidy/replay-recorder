@@ -22,6 +22,11 @@ EventSink::~EventSink()
     }
 }
 
+void EventSink::addSource(EventSource *source)
+{
+    source->initializeSource(this);
+}
+
 EventSink &EventSink::operator<<(const char *data)
 {
     // Get buffer size needed to perform the conversion

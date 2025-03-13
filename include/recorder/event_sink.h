@@ -31,7 +31,7 @@ class EventSink
     EventSink &operator<<(const wchar_t *data);
 
     // Add a source to receive events from (e.g., user input events)
-    template <typename T> void addSource(EventSource<T> &source);
+    void addSource(EventSource *source);
 
   private:
     // Checks buffer size and calls _flushData() it if its too big
@@ -47,7 +47,3 @@ class EventSink
     std::ofstream file;
 };
 
-template <typename T> void EventSink::addSource(EventSource<T> &source)
-{
-    source.initializeSource(this);
-}

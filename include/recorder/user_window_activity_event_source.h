@@ -6,12 +6,13 @@
 
 #include "event_source.h"
 
-class UserWindowActivityEventSource : public EventSource<UserWindowActivityEventSource>
+class UserWindowActivityEventSource : public EventSource
 {
-    friend class EventSource<UserWindowActivityEventSource>;
+
+  public:
+    UserWindowActivityEventSource() = default;
 
   private:
-    UserWindowActivityEventSource() = default;
     ~UserWindowActivityEventSource()
     {
         uninitializeSource();
@@ -21,13 +22,17 @@ class UserWindowActivityEventSource : public EventSource<UserWindowActivityEvent
     virtual void initializeSource(class EventSink *inSink) override;
     virtual void uninitializeSource() override;
 
-    static EventSink *outputSink;
+    EventSink *outputSink;
 
     // Returns the name of the process corresponding to the focused window
     bool getWindowTitle(HWND hWindow, std::string &destStr);
 
-    // Windows event callback
+  private:
+    // Hook procedure that is executed in response to window events
     static void CALLBACK WinEventProc(HWINEVENTHOOK hWinEventHook, DWORD event, HWND hWnd, LONG idObject, LONG idChild,
                                       DWORD dwEventThread, DWORD dwmsEventTime);
-    HWINEVENTHOOK hWinEventHook;
+
+    // Store the haandle to the WinEventProc
+    // static bc Windows API
+    static HWINEVENTHOOK hWinEventHook;
 };

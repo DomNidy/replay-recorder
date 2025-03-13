@@ -10,13 +10,12 @@
 /**
  * Singleton that records user input events (e.g., keyboard)
  */
-class UserInputEventSource : public EventSource<UserInputEventSource>
+class UserInputEventSource : public EventSource
 {
-    friend class EventSource<UserInputEventSource>;
+  public:
+    UserInputEventSource() = default;
 
   private:
-    /** Implementing singleton */
-    UserInputEventSource() = default;
     ~UserInputEventSource()
     {
         uninitializeSource();
@@ -30,15 +29,17 @@ class UserInputEventSource : public EventSource<UserInputEventSource>
 
   private:
     // The EventSink that registered us and we should write to
-    static EventSink *outputSink;
+    EventSink *outputSink;
+
+    // Enumerate all processes on the Windows system
+    void enumerateWindowsProcesses() const;
 
   private:
     // Store the handle to the keyboard input hook
+    // Currently, only one keyboard hook can be registered
+    // these are required to be static bc of Windows API.
     static HHOOK hKeyboardHook;
 
     // Hook procedure that is executed when keyboard input is received
     static LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
-
-    // Enumerate all processes on the Windows system
-    void enumerateWindowsProcesses() const;
 };

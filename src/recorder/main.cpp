@@ -39,9 +39,9 @@ int main(int argc, char **argv)
     g_eventSink = eventSink;
 
     // Create EventSources to monitor user activity
-    UserInputEventSource &inputEventSource = UserInputEventSource::getInstance();
-    UserWindowActivityEventSource &windowActivityEventSource = UserWindowActivityEventSource::getInstance();
-    ScreenshotEventSource &screenshotEventSource = ScreenshotEventSource::getInstance();
+    UserInputEventSource *inputEventSource = new UserInputEventSource();
+    UserWindowActivityEventSource *windowActivityEventSource = new UserWindowActivityEventSource();
+    ScreenshotEventSource *screenshotEventSource = new ScreenshotEventSource();
 
     // Add sources to sink
     eventSink->addSource(inputEventSource);

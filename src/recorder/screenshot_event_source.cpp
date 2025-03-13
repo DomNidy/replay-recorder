@@ -5,9 +5,19 @@
 #include "event_source.h"
 #include "screenshot_event_source.h"
 
-EventSink *ScreenshotEventSource::outputSink = nullptr;
-
 void ScreenshotEventSource::setConfig(ScreenshotEventSourceConfig config)
+{
+    config.validate();
+    this->config = config;
+}
+
+ScreenshotEventSource::ScreenshotEventSource()
+{
+    config = ScreenshotEventSourceConfig();
+    config.validate();
+}
+
+ScreenshotEventSource::ScreenshotEventSource(ScreenshotEventSourceConfig config)
 {
     config.validate();
     this->config = config;

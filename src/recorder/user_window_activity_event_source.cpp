@@ -6,7 +6,8 @@
 
 #include "event_sink.h"
 
-EventSink *UserWindowActivityEventSource::outputSink = nullptr;
+HWINEVENTHOOK UserWindowActivityEventSource::hWinEventHook = NULL;
+UserWindowActivityEventSource *currentInstance = nullptr;
 
 // Date formatting utility functions
 // move this to a util lib or header
@@ -111,6 +112,16 @@ void UserWindowActivityEventSource::initializeSource(EventSink *inSink)
         throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
 
+    if (hWinEventHook != NULL || currentInstance != nullptr)
+    {
+        throw std::runtime_error(
+            std::string("Tried to initialize a UserWindowActivityEventSource, but one was already initialized earlier."
+                        "Only a single UserWindowActivityEventSource may exist at any given time. hWinEventHook must "
+                        "be NULL, and currentInstance must be nullptr!") +
+            "\nWas hWinEventHook null?: " + (hWinEventHook == NULL ? "Yes" : "No") +
+            "\nWas currentInstance nullptr?: " + (currentInstance == nullptr ? "Yes" : "No"));
+    }
+
     // Add windows hook
     hWinEventHook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND,
                                     NULL, // Procedure is not in another module (its in this one)
@@ -122,6 +133,7 @@ void UserWindowActivityEventSource::initializeSource(EventSink *inSink)
     {
         throw std::runtime_error("Failed to install window event hook: " + std::to_string(GetLastError()));
     }
+    currentInstance = this;
 
     spdlog::info("UserWindowActivityEventSource successfully installed keyboard hook");
 }
@@ -132,6 +144,7 @@ void UserWindowActivityEventSource::uninitializeSource()
 
     UnhookWinEvent(hWinEventHook);
     hWinEventHook = NULL;
+    currentInstance = nullptr;
     spdlog::info("UserWindowActivityEventSource successfully uninstalled window event hook");
 }
 
@@ -140,9 +153,13 @@ void CALLBACK UserWindowActivityEventSource::WinEventProc(HWINEVENTHOOK hWinEven
                                                           LONG idObject, LONG idChild, DWORD dwEventThread,
                                                           DWORD dwmsEventTime)
 {
+    assert(currentInstance != nullptr,
+           "UserWindowActivityEventSource::WinEventProc ran, but currentInstance was nullptr. This should "
+           "never happen, as the currentInstance should be set to null when the hook is removed.");
+
     std::string windowTitle;
 
-    if (event == EVENT_SYSTEM_FOREGROUND && getInstance().getWindowTitle(hWnd, windowTitle))
+    if (event == EVENT_SYSTEM_FOREGROUND && currentInstance->getWindowTitle(hWnd, windowTitle))
     {
         // Special separator token, produced when focus enters and exits a window
         if (windowTitle != "Task Switching")
@@ -152,7 +169,7 @@ void CALLBACK UserWindowActivityEventSource::WinEventProc(HWINEVENTHOOK hWinEven
 
             std::ostringstream oss;
             oss << "\n[CHANGE WINDOW: \"" << windowTitle << "\", TIMESTAMP: " << timestampString << "]\n";
-            *outputSink << oss.str().data();
+            *currentInstance->outputSink << oss.str().data();
         }
     }
 }
