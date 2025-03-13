@@ -34,7 +34,7 @@ class ScreenshotEventSource : public EventSource
   public:
     ScreenshotEventSource();
     ScreenshotEventSource(ScreenshotEventSourceConfig config);
-    
+
     // Returns the instance with the specified configuration.
     void setConfig(ScreenshotEventSourceConfig config);
 
