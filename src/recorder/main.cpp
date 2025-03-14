@@ -41,7 +41,8 @@ int main(int argc, char **argv)
     // Create EventSources to monitor user activity
     UserInputEventSource *inputEventSource = new UserInputEventSource();
     UserWindowActivityEventSource *windowActivityEventSource = new UserWindowActivityEventSource();
-    ScreenshotEventSource *screenshotEventSource = new ScreenshotEventSource();
+    ScreenshotEventSource *screenshotEventSource = new ScreenshotEventSource(
+        ScreenshotEventSourceConfig(15, "./replay-screenshots", ScreenshotSerializationStrategyType::FilePath));
 
     // Add sources to sink
     eventSink->addSource(inputEventSource);

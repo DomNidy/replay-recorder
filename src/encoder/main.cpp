@@ -20,57 +20,56 @@ int main(int argc, char *argv[])
                   << "\t--remove-special\t Removes special tokens.\n";
         return 1;
     }
-    std::string inputFilePath = argv[1];
-    std::string outputFilePath;
+    const std::string inputFilename = argv[1];
+    std::filesystem::path outputFilename;
     if (argc >= 3)
     {
-        outputFilePath = argv[2];
+        outputFilename = argv[2];
     }
     else
     {
         // Derive output file path if one not provided
-        std::filesystem::path inPath(inputFilePath);
-        outputFilePath =
-            (inPath.parent_path() / (inPath.stem().string() + "_encoded" + inPath.extension().string())).string();
+        std::filesystem::path inPath(inputFilename);
+        outputFilename = inPath.parent_path() / (inPath.stem().string() + "_encoded" + inPath.extension().string());
     }
 
     // Load input file as a string.
-    std::ifstream inFile(inputFilePath);
-    if (!inFile)
+    std::ifstream inputFile(inputFilename);
+    if (!inputFile.is_open())
     {
-        std::cerr << "Error opening input file: " << inputFilePath << "\n";
+        std::cerr << "Error opening input file: " << inputFilename << "\n";
         return 1;
     }
     std::stringstream buffer;
-    buffer << inFile.rdbuf();
-    std::string inputContent = buffer.str();
+    buffer << inputFile.rdbuf();
+    const std::string inputContent = buffer.str();
 
     // Encode using the rle method.
-    std::string encodedContent = RP::Encoder::rle(inputContent);
+    const std::string encodedContent = RP::Encoder::rle(inputContent);
 
     // Compare lengths and compute percent change.
-    size_t originalLength = inputContent.size();
-    size_t encodedLength = encodedContent.size();
-    double percentChange =
+    const size_t originalLength = inputContent.size();
+    const size_t encodedLength = encodedContent.size();
+    const double percentChange =
         (originalLength == 0)
             ? 0.0
-            : (static_cast<int>(encodedLength - originalLength) / static_cast<float>(originalLength)) * 100.0;
+            : (static_cast<int>(encodedLength - originalLength) / static_cast<double>(originalLength)) * 100.0;
 
     std::cout << "Original length: " << originalLength << "\n";
     std::cout << "Encoded length: " << encodedLength << "\n";
-    std::cout << "Percent difference: " << std::fixed << std::setprecision(3) << percentChange << "% "
-              << (percentChange >= 0 ? "increase" : "decrease") << "\n";
+    std::cout << "Percent change: " << std::fixed << std::setprecision(2) << percentChange << "%\n";
 
-    // Write the encoded content to file.
-    std::ofstream outFile(outputFilePath);
-    if (!outFile)
+    // Write encoded content to output file
+    std::ofstream outputFile(outputFilename);
+    if (!outputFile.is_open())
     {
-        std::cerr << "Error opening output file: " << outputFilePath << "\n";
+        std::cerr << "Error opening output file: " << outputFilename << "\n";
         return 1;
     }
-    outFile << encodedContent;
-    outFile.close();
-    std::cout << "Encoded file written to: " << outputFilePath << "\n";
+    outputFile << encodedContent;
+    outputFile.close();
+
+    std::cout << "Encoded content written to: " << outputFilename << "\n";
 
     return 0;
 }

@@ -21,7 +21,6 @@ class EventSource
     EventSource &operator=(EventSource &&) = delete;
 
   private:
-    friend class EventSink;
     /**
      * Called by EventSink to add an EventSource
      */
