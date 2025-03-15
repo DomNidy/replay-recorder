@@ -94,7 +94,7 @@ bool Base64SerializationStrategy::serializeScreenshot(const ScreenshotEventSourc
     return true;
 }
 
-ScreenshotEventSource::ScreenshotEventSource() : outputSink(nullptr), isRunning(false)
+ScreenshotEventSource::ScreenshotEventSource() : outputSink(std::weak_ptr<EventSink>()), isRunning(false)
 {
     ScreenshotEventSourceConfig config;
     // Default config, but validate it anyway
@@ -116,7 +116,8 @@ ScreenshotEventSource::ScreenshotEventSource() : outputSink(nullptr), isRunning(
     }
 }
 
-ScreenshotEventSource::ScreenshotEventSource(ScreenshotEventSourceConfig config) : outputSink(nullptr), isRunning(false)
+ScreenshotEventSource::ScreenshotEventSource(ScreenshotEventSourceConfig config)
+    : outputSink(std::weak_ptr<EventSink>()), isRunning(false) // Initialize outputSink as a weak_ptr
 {
     config.validate();
     screenshotIntervalSeconds = config.screenshotIntervalSeconds;
@@ -134,9 +135,9 @@ ScreenshotEventSource::ScreenshotEventSource(ScreenshotEventSourceConfig config)
     }
 }
 
-void ScreenshotEventSource::initializeSource(std::shared_ptr<EventSink> inSink)
+void ScreenshotEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
 {
-    if (!inSink)
+    if (inSink.expired())
     {
         throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
@@ -298,10 +299,10 @@ bool ScreenshotEventSource::captureScreenshot()
 
     bool result = false;
     // Use the serialization strategy to process the screenshot
-    if (outputSink && serializationStrategy)
+    if (!outputSink.expired() && serializationStrategy)
     {
-        result =
-            serializationStrategy->serializeScreenshot(this, outputSink.get(), rgbData, screenWidth, screenHeight, 3);
+        result = serializationStrategy->serializeScreenshot(this, outputSink.lock().get(), rgbData, screenWidth,
+                                                            screenHeight, 3);
     }
     else
     {

@@ -101,10 +101,10 @@ class ScreenshotEventSource : public EventSource
     ~ScreenshotEventSource();
 
   private:
-    virtual void initializeSource(std::shared_ptr<EventSink> inSink) override;
+    virtual void initializeSource(std::weak_ptr<EventSink> inSink) override;
     virtual void uninitializeSource() override;
 
-    std::shared_ptr<EventSink> outputSink;
+    std::weak_ptr<EventSink> outputSink;
 
     std::thread screenshotThread;
     // Whether or not the screenshotThread is currently capturing screenshots

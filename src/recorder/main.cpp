@@ -9,10 +9,29 @@
 #include "user_input_event_source.h"
 #include "user_window_activity_event_source.h"
 
+namespace
+{
+std::shared_ptr<EventSink> g_eventSink;
+}
+
+void signalHandler(int signal)
+{
+    if (signal == SIGINT)
+    {
+        spdlog::info("Gracefully shutting down...");
+        if (g_eventSink)
+        {
+            g_eventSink.reset();
+        }
+        exit(0);
+    }
+}
+
 int main(int argc, char **argv)
 {
+    std::signal(SIGINT, signalHandler);
     // Create EventSink (receives events pertaining to the user's activity)
-    EventSink eventSink = EventSink("out.txt");
+    g_eventSink = std::make_shared<EventSink>("out.txt");
 
     // Create EventSources to monitor user activity
     auto inputEventSource = std::make_unique<UserInputEventSource>();
@@ -21,9 +40,9 @@ int main(int argc, char **argv)
         ScreenshotEventSourceConfig(60, "./replay-screenshots", ScreenshotSerializationStrategyType::FilePath));
 
     // Add sources to sink
-    eventSink.addSource(std::move(inputEventSource));
-    eventSink.addSource(std::move(windowActivityEventSource));
-    eventSink.addSource(std::move(screenshotEventSource));
+    g_eventSink->addSource(std::move(inputEventSource));
+    g_eventSink->addSource(std::move(windowActivityEventSource));
+    g_eventSink->addSource(std::move(screenshotEventSource));
 
     BOOL ret;
     MSG msg;

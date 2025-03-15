@@ -17,10 +17,10 @@ class UserWindowActivityEventSource : public EventSource
     }
 
   private:
-    virtual void initializeSource(std::shared_ptr<EventSink> inSink) override;
+    virtual void initializeSource(std::weak_ptr<EventSink> inSink) override;
     virtual void uninitializeSource() override;
 
-    std::shared_ptr<EventSink> outputSink;
+    std::weak_ptr<EventSink> outputSink;
 
     // Returns the name of the process corresponding to the focused window
     bool getWindowTitle(HWND hWindow, std::string &destStr);

@@ -15,10 +15,10 @@ UserInputEventSource *currentInstance = nullptr;
 bool leftAltPressed = false;
 bool tabPressed = false;
 
-void UserInputEventSource::initializeSource(std::shared_ptr<EventSink> inSink)
+void UserInputEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
 {
     outputSink = inSink;
-    if (outputSink == nullptr)
+    if (outputSink.expired())
     {
         throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
@@ -117,7 +117,7 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
                 // false
                 if (!leftAltPressed)
                 {
-                    *currentInstance->outputSink << "[TAB]";
+                    *currentInstance->outputSink.lock() << "[TAB]";
                     tabPressed = false;
                 }
                 else
@@ -129,17 +129,17 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
             // Handle ALT+TAB
             if (leftAltPressed && tabPressed)
             {
-                *currentInstance->outputSink << "[ALT+TAB]";
+                *currentInstance->outputSink.lock() << "[ALT+TAB]";
             }
             // Handle special key or everything else
-            else if (!handleSpecialkey(pKeyboard->vkCode, currentInstance->outputSink.get()))
+            else if (!handleSpecialkey(pKeyboard->vkCode, currentInstance->outputSink.lock().get()))
             {
                 // If we get here and alt is pressed, that means that left alt was/is
                 // pressed, and the key that followed it was not TAB, so we'll just
                 // treat it as another combination (this is scuffed)
                 if (leftAltPressed)
                 {
-                    *currentInstance->outputSink << "[ALT]";
+                    *currentInstance->outputSink.lock() << "[ALT]";
                 }
 
                 wchar_t unicodeBuffer[2] = {0};
@@ -179,7 +179,7 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
                     // If all of the chars were printable, then send them to output sink
                     if (i == len)
                     {
-                        *currentInstance->outputSink << unicodeBuffer;
+                        *currentInstance->outputSink.lock() << unicodeBuffer;
                     }
                 }
             }

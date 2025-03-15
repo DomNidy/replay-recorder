@@ -66,8 +66,7 @@ inline void EventSink::_flushData()
 {
     if (!recordingBuffer.empty())
     {
-        spdlog::info("Flushing recording buffer & writing to file");
-        spdlog::info("Recording buffer size: {}", recordingBuffer.size());
+        spdlog::info("Flushing {} bytes from recording buffer", recordingBuffer.size());
 
         // Convert recording buffer's wchar_t array to an std::string so we can
         // save to UTF-8

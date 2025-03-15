@@ -104,10 +104,10 @@ std::string _formatTimestampToLLMReadable(std::tm *time)
     return ss.str();
 }
 
-void UserWindowActivityEventSource::initializeSource(std::shared_ptr<EventSink> inSink)
+void UserWindowActivityEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
 {
     outputSink = inSink;
-    if (outputSink == nullptr)
+    if (outputSink.expired())
     {
         throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
@@ -169,7 +169,7 @@ void CALLBACK UserWindowActivityEventSource::WinEventProc(HWINEVENTHOOK hWinEven
 
             std::ostringstream oss;
             oss << "\n[CHANGE WINDOW: \"" << windowTitle << "\", TIMESTAMP: " << timestampString << "]\n";
-            *currentInstance->outputSink << oss.str().data();
+            *currentInstance->outputSink.lock() << oss.str().data();
         }
     }
 }
