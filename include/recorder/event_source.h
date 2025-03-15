@@ -1,13 +1,15 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 
 #define RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK                                                                     \
     "initializeSource() was called with inSink == nullptr, Need an EventSink to initalize a source!"
 
+class EventSink;
 class EventSource
 {
-    friend class EventSink;
+    friend EventSink;
 
   public:
     EventSource()
@@ -24,6 +26,6 @@ class EventSource
     /**
      * Called by EventSink to add an EventSource
      */
-    virtual void initializeSource(class EventSink *inSink) = 0;
+    virtual void initializeSource(std::shared_ptr<EventSink> inSink) = 0;
     virtual void uninitializeSource() = 0;
 };

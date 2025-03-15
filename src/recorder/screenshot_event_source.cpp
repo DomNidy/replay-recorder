@@ -17,20 +17,28 @@ static const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 std::string Base64SerializationStrategy::encodeBase64(const BYTE *data, size_t dataLength) const
 {
     std::string encoded;
+    // Base64 encoding expands data by 4/3 (4 output chars for every 3 input bytes)
     encoded.reserve((dataLength + 2) / 3 * 4); // Reserve space for the base64 output
 
+    // Process input data in chunks of 3 bytes
     for (size_t i = 0; i < dataLength; i += 3)
     {
-        uint32_t octet_a = i < dataLength ? data[i] : 0;
-        uint32_t octet_b = i + 1 < dataLength ? data[i + 1] : 0;
-        uint32_t octet_c = i + 2 < dataLength ? data[i + 2] : 0;
+        // Get 3 bytes from input, use 0 for padding if we're at the end of the data
+        uint32_t octet_a = i < dataLength ? data[i] : 0;         // First byte
+        uint32_t octet_b = i + 1 < dataLength ? data[i + 1] : 0; // Second byte
+        uint32_t octet_c = i + 2 < dataLength ? data[i + 2] : 0; // Third byte
 
-        uint32_t triple = (octet_a << 16) + (octet_b << 8) + octet_c;
+        // Combine 3 bytes (24 bits) into a single 24-bit value
+        uint32_t triple = (octet_a << 16) | (octet_b << 8) | octet_c;
 
-        encoded.push_back(base64_chars[(triple >> 18) & 0x3F]);
-        encoded.push_back(base64_chars[(triple >> 12) & 0x3F]);
-        encoded.push_back(i + 1 < dataLength ? base64_chars[(triple >> 6) & 0x3F] : '=');
-        encoded.push_back(i + 2 < dataLength ? base64_chars[triple & 0x3F] : '=');
+        // Extract four 6-bit values from the 24-bit number using 0x3F (binary 111111) as a mask
+        // Each 6-bit value (0-63) is used as an index into the base64_chars array
+        encoded.push_back(base64_chars[(triple >> 18) & 0x3F]); // Extract bits 18-23
+        encoded.push_back(base64_chars[(triple >> 12) & 0x3F]); // Extract bits 12-17
+
+        // For the last two characters, use '=' padding if we don't have enough input data
+        encoded.push_back(i + 1 < dataLength ? base64_chars[(triple >> 6) & 0x3F] : '='); // Extract bits 6-11 or pad
+        encoded.push_back(i + 2 < dataLength ? base64_chars[triple & 0x3F] : '=');        // Extract bits 0-5 or pad
     }
 
     return encoded;
@@ -80,11 +88,8 @@ bool Base64SerializationStrategy::serializeScreenshot(const ScreenshotEventSourc
     // Encode the image data as base64
     std::string base64Data = encodeBase64(imageData, dataSize);
 
-    // Convert to wide string
-    std::wstring wBase64Data(base64Data.begin(), base64Data.end());
-
     // Write the token and base64 data to the event sink
-    *sink << SCREENSHOT_BASE64_TOKEN << wBase64Data.c_str() << SCREENSHOT_END_TOKEN;
+    *sink << SCREENSHOT_BASE64_TOKEN << base64Data.c_str() << SCREENSHOT_END_TOKEN;
 
     return true;
 }
@@ -129,7 +134,7 @@ ScreenshotEventSource::ScreenshotEventSource(ScreenshotEventSourceConfig config)
     }
 }
 
-void ScreenshotEventSource::initializeSource(EventSink *inSink)
+void ScreenshotEventSource::initializeSource(std::shared_ptr<EventSink> inSink)
 {
     if (!inSink)
     {
@@ -175,6 +180,8 @@ bool ScreenshotEventSource::captureScreenshot()
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
     // Create a device context (DC) for the entire screen
+    // Device contexts sort of act like fd's and we use them
+    // to access "read/write" capabilities of graphics devices
     HDC screenDC = GetDC(NULL);
     if (!screenDC)
     {
@@ -182,7 +189,11 @@ bool ScreenshotEventSource::captureScreenshot()
         return false;
     }
 
-    // Create a compatible DC in memory
+    // Create a memory DC that is compatible with the screen DC.
+    // Compatibility here means that the memory DC will match
+    // width and height of the device in pixels, etc.
+    // "When the memory DC is created, its display surface is
+    // "exactly one monochrome pixel wide and one monochrome pixel high"
     HDC memDC = CreateCompatibleDC(screenDC);
     if (!memDC)
     {
@@ -190,7 +201,13 @@ bool ScreenshotEventSource::captureScreenshot()
         ReleaseDC(NULL, screenDC); // Clean up screenDC
         return false;
     }
+
     // Create a bitmap compatible with the screen DC
+    // "Compatibility" is important because different screens might have
+    // different color depths or different internal representations of color
+    // The color format of the bitmap created by the CreateCompatibleBitmap function matches the color format of the
+    // device identified by the hdc parameter. This bitmap can be selected into any memory device context that is
+    // compatible with the original device.
     HBITMAP bitmap = CreateCompatibleBitmap(screenDC, screenWidth, screenHeight);
     if (!bitmap)
     {
@@ -200,7 +217,9 @@ bool ScreenshotEventSource::captureScreenshot()
         return false;
     }
 
-    // Select the bitmap into the memory DC
+    // Select the bitmap into the memory DC.
+    // Essentially, we're telling the memory DC that all subsequent drawing operations should operate on the bitmap that
+    // we pass it. Sort of similar to how OpenGL is a state machine.
     HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, bitmap);
     if (!oldBitmap)
     {
@@ -281,7 +300,8 @@ bool ScreenshotEventSource::captureScreenshot()
     // Use the serialization strategy to process the screenshot
     if (outputSink && serializationStrategy)
     {
-        result = serializationStrategy->serializeScreenshot(this, outputSink, rgbData, screenWidth, screenHeight, 3);
+        result =
+            serializationStrategy->serializeScreenshot(this, outputSink.get(), rgbData, screenWidth, screenHeight, 3);
     }
     else
     {

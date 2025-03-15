@@ -14,8 +14,6 @@ class UserInputEventSource : public EventSource
 {
   public:
     UserInputEventSource() = default;
-
-  private:
     ~UserInputEventSource()
     {
         uninitializeSource();
@@ -23,13 +21,13 @@ class UserInputEventSource : public EventSource
 
   private:
     //~ Begin EventSource interface
-    virtual void initializeSource(EventSink *inSink) override;
+    virtual void initializeSource(std::shared_ptr<EventSink> inSink) override;
     virtual void uninitializeSource() override;
     //~ End EventSource interface
 
   private:
     // The EventSink that registered us and we should write to
-    EventSink *outputSink;
+    std::shared_ptr<EventSink> outputSink;
 
     // Enumerate all processes on the Windows system
     void enumerateWindowsProcesses() const;

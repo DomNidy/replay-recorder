@@ -22,9 +22,10 @@ EventSink::~EventSink()
     }
 }
 
-void EventSink::addSource(EventSource *source)
+void EventSink::addSource(std::unique_ptr<EventSource> source)
 {
-    source->initializeSource(this);
+    source->initializeSource(shared_from_this());
+    sources.push_back(std::move(source));
 }
 
 EventSink &EventSink::operator<<(const char *data)

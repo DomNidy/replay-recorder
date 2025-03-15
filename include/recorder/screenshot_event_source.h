@@ -55,7 +55,6 @@ class FilePathSerializationStrategy : public ScreenshotSerializationStrategy
     virtual bool serializeScreenshot(const ScreenshotEventSource *source, EventSink *sink, const BYTE *imageData,
                                      int width, int height, int channels) const override;
 
-    // Helper method to save screenshot to file (used by FilePathSerializationStrategy)
     std::string saveScreenshotToFile(std::filesystem::path outputDirectory, const BYTE *imageData, int width,
                                      int height, int channels) const;
 
@@ -99,21 +98,21 @@ class ScreenshotEventSource : public EventSource
   public:
     ScreenshotEventSource();
     ScreenshotEventSource(ScreenshotEventSourceConfig config);
-
-  private:
     ~ScreenshotEventSource();
 
-    virtual void initializeSource(EventSink *inSink) override;
+  private:
+    virtual void initializeSource(std::shared_ptr<EventSink> inSink) override;
     virtual void uninitializeSource() override;
 
-    EventSink *outputSink;
+    std::shared_ptr<EventSink> outputSink;
 
     std::thread screenshotThread;
     // Whether or not the screenshotThread is currently capturing screenshots
     std::atomic<bool> isRunning;
 
     void screenshotThreadFunction();
-    bool captureScreenshot(); // No longer const as it may modify the sink
+    bool captureScreenshot();
+
   private:
     // Strategy for serializing screenshots
     std::unique_ptr<ScreenshotSerializationStrategy> serializationStrategy;

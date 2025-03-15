@@ -15,7 +15,7 @@ UserInputEventSource *currentInstance = nullptr;
 bool leftAltPressed = false;
 bool tabPressed = false;
 
-void UserInputEventSource::initializeSource(EventSink *inSink)
+void UserInputEventSource::initializeSource(std::shared_ptr<EventSink> inSink)
 {
     outputSink = inSink;
     if (outputSink == nullptr)
@@ -93,8 +93,9 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
 
     UserInputEventSource *instance = currentInstance;
 
-    assert(instance != nullptr, "UserInputEventSource::KeyboardProc ran, but currentInstance was nullptr. This should "
-                                "never happen, as the currentInstance should be set to null when the hook is removed.");
+    assert(instance != nullptr &&
+           "UserInputEventSource::KeyboardProc ran, but currentInstance was nullptr. This should "
+           "never happen, as the currentInstance should be set to null when the hook is removed.");
 
     if (nCode == HC_ACTION)
     {
@@ -131,7 +132,7 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
                 *currentInstance->outputSink << "[ALT+TAB]";
             }
             // Handle special key or everything else
-            else if (!handleSpecialkey(pKeyboard->vkCode, currentInstance->outputSink))
+            else if (!handleSpecialkey(pKeyboard->vkCode, currentInstance->outputSink.get()))
             {
                 // If we get here and alt is pressed, that means that left alt was/is
                 // pressed, and the key that followed it was not TAB, so we'll just

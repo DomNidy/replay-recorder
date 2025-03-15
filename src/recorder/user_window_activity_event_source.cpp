@@ -104,7 +104,7 @@ std::string _formatTimestampToLLMReadable(std::tm *time)
     return ss.str();
 }
 
-void UserWindowActivityEventSource::initializeSource(EventSink *inSink)
+void UserWindowActivityEventSource::initializeSource(std::shared_ptr<EventSink> inSink)
 {
     outputSink = inSink;
     if (outputSink == nullptr)
@@ -153,7 +153,7 @@ void CALLBACK UserWindowActivityEventSource::WinEventProc(HWINEVENTHOOK hWinEven
                                                           LONG idObject, LONG idChild, DWORD dwEventThread,
                                                           DWORD dwmsEventTime)
 {
-    assert(currentInstance != nullptr,
+    assert(currentInstance != nullptr &&
            "UserWindowActivityEventSource::WinEventProc ran, but currentInstance was nullptr. This should "
            "never happen, as the currentInstance should be set to null when the hook is removed.");
 

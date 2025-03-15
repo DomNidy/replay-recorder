@@ -2,52 +2,28 @@
 
 #include <csignal>
 #include <iostream>
-
+#include <memory>
 #include "event_sink.h"
 #include "screenshot_event_source.h"
 #include "spdlog/spdlog.h"
 #include "user_input_event_source.h"
 #include "user_window_activity_event_source.h"
 
-EventSink *g_eventSink = nullptr;
-
-// Flush the event sink & serialize it to file
-void signalHandler(int signal)
-{
-    if (signal == SIGINT)
-    {
-        std::cout << "Ctrl+C detected. Performing cleanup..." << std::endl;
-
-        if (g_eventSink)
-        {
-            // Destructor makes sure data is flushed & written to file
-            delete g_eventSink;
-            g_eventSink = nullptr;
-        }
-
-        // Exit the program gracefully
-        exit(0);
-    }
-}
-
 int main(int argc, char **argv)
 {
-    std::signal(SIGINT, signalHandler);
-
     // Create EventSink (receives events pertaining to the user's activity)
-    EventSink *eventSink = new EventSink("out.txt");
-    g_eventSink = eventSink;
+    EventSink eventSink = EventSink("out.txt");
 
     // Create EventSources to monitor user activity
-    UserInputEventSource *inputEventSource = new UserInputEventSource();
-    UserWindowActivityEventSource *windowActivityEventSource = new UserWindowActivityEventSource();
-    ScreenshotEventSource *screenshotEventSource = new ScreenshotEventSource(
-        ScreenshotEventSourceConfig(15, "./replay-screenshots", ScreenshotSerializationStrategyType::FilePath));
+    auto inputEventSource = std::make_unique<UserInputEventSource>();
+    auto windowActivityEventSource = std::make_unique<UserWindowActivityEventSource>();
+    auto screenshotEventSource = std::make_unique<ScreenshotEventSource>(
+        ScreenshotEventSourceConfig(60, "./replay-screenshots", ScreenshotSerializationStrategyType::FilePath));
 
     // Add sources to sink
-    eventSink->addSource(inputEventSource);
-    eventSink->addSource(windowActivityEventSource);
-    eventSink->addSource(screenshotEventSource);
+    eventSink.addSource(std::move(inputEventSource));
+    eventSink.addSource(std::move(windowActivityEventSource));
+    eventSink.addSource(std::move(screenshotEventSource));
 
     BOOL ret;
     MSG msg;
