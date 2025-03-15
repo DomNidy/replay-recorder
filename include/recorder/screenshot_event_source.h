@@ -13,6 +13,9 @@
 #include "event_sink.h"
 #include "event_source.h"
 
+#define RP_ERR_FAILED_TO_CREATE_SCREENSHOT_OUTPUT_DIRECTORY "Failed to create screenshot output directory"
+#define RP_ERR_INVALID_SCREENSHOT_SERIALIZATION_STRATEGY "Invalid screenshot serialization strategy"
+
 constexpr uint32_t SCREENSHOT_MIN_INTERVAL = 1;
 // Tokens to identify screenshot data in the event stream
 constexpr const wchar_t *SCREENSHOT_PATH_TOKEN = L"[SCREENSHOT_PATH]";
@@ -74,30 +77,10 @@ class Base64SerializationStrategy : public ScreenshotSerializationStrategy
     std::string encodeBase64(const BYTE *data, size_t dataLength) const;
 };
 
-class ScreenshotEventSourceConfig
-{
-  public:
-    ScreenshotEventSourceConfig();
-    // TODO: It's weird that we need to pass the output directory here because Base64SerializationStrategy
-    // doesn't use it.
-    ScreenshotEventSourceConfig(uint32_t screenshotIntervalSeconds, std::filesystem::path screenshotOutputDirectory,
-                                ScreenshotSerializationStrategyType strategyType);
-
-  private:
-    friend class ScreenshotEventSource;
-    uint32_t screenshotIntervalSeconds;
-    std::filesystem::path screenshotOutputDirectory;
-    ScreenshotSerializationStrategyType strategyType;
-
-    // Ensures that the output directory and screenshot interval are valid
-    void validate();
-};
-
 class ScreenshotEventSource : public EventSource
 {
   public:
     ScreenshotEventSource();
-    ScreenshotEventSource(ScreenshotEventSourceConfig config);
     ~ScreenshotEventSource();
 
   private:
@@ -114,8 +97,33 @@ class ScreenshotEventSource : public EventSource
     bool captureScreenshot();
 
   private:
+    friend class ScreenshotEventSourceBuilder;
     // Strategy for serializing screenshots
     std::unique_ptr<ScreenshotSerializationStrategy> serializationStrategy;
 
     uint32_t screenshotIntervalSeconds;
+    uint32_t pauseAfterIdleSeconds;
+};
+
+class ScreenshotEventSourceBuilder
+{
+  public:
+    ScreenshotEventSourceBuilder();
+    ~ScreenshotEventSourceBuilder() = default;
+
+    ScreenshotEventSourceBuilder &withScreenshotIntervalSeconds(uint32_t screenshotIntervalSeconds);
+    ScreenshotEventSourceBuilder &withPauseAfterIdleSeconds(uint32_t pauseAfterIdleSeconds);
+    ScreenshotEventSourceBuilder &withScreenshotOutputDirectory(std::filesystem::path screenshotOutputDirectory);
+    ScreenshotEventSourceBuilder &withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType strategyType);
+    std::unique_ptr<ScreenshotEventSource> build();
+
+  private:
+    void validate();
+
+    uint32_t screenshotIntervalSeconds;
+    // Number of seconds that the user can be idle before we pause taking screenshots ("Idle" meaning that the
+    // user has not performed any keyboard or mouse input)
+    uint32_t pauseAfterIdleSeconds;
+    std::filesystem::path screenshotOutputDirectory;
+    ScreenshotSerializationStrategyType serializationStrategyType;
 };

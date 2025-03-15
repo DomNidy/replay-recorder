@@ -96,43 +96,6 @@ bool Base64SerializationStrategy::serializeScreenshot(const ScreenshotEventSourc
 
 ScreenshotEventSource::ScreenshotEventSource() : outputSink(std::weak_ptr<EventSink>()), isRunning(false)
 {
-    ScreenshotEventSourceConfig config;
-    // Default config, but validate it anyway
-    config.validate();
-
-    screenshotIntervalSeconds = config.screenshotIntervalSeconds;
-
-    switch (config.strategyType)
-    {
-    case ScreenshotSerializationStrategyType::FilePath:
-        serializationStrategy = std::make_unique<FilePathSerializationStrategy>(config.screenshotOutputDirectory);
-        break;
-    case ScreenshotSerializationStrategyType::Base64:
-        serializationStrategy = std::make_unique<Base64SerializationStrategy>();
-        break;
-    default:
-        serializationStrategy = std::make_unique<FilePathSerializationStrategy>(config.screenshotOutputDirectory);
-        break;
-    }
-}
-
-ScreenshotEventSource::ScreenshotEventSource(ScreenshotEventSourceConfig config)
-    : outputSink(std::weak_ptr<EventSink>()), isRunning(false) // Initialize outputSink as a weak_ptr
-{
-    config.validate();
-    screenshotIntervalSeconds = config.screenshotIntervalSeconds;
-    switch (config.strategyType)
-    {
-    case ScreenshotSerializationStrategyType::FilePath:
-        serializationStrategy = std::make_unique<FilePathSerializationStrategy>(config.screenshotOutputDirectory);
-        break;
-    case ScreenshotSerializationStrategyType::Base64:
-        serializationStrategy = std::make_unique<Base64SerializationStrategy>();
-        break;
-    default:
-        serializationStrategy = std::make_unique<FilePathSerializationStrategy>(config.screenshotOutputDirectory);
-        break;
-    }
 }
 
 void ScreenshotEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
@@ -169,7 +132,31 @@ void ScreenshotEventSource::screenshotThreadFunction()
 {
     while (isRunning)
     {
-        captureScreenshot();
+        LASTINPUTINFO lii;
+        lii.cbSize = sizeof(LASTINPUTINFO);
+        GetLastInputInfo(&lii);
+
+        // Timer can wrap around after 49.7 days of system uptime, so we handle that case
+        DWORD currentTickCount = GetTickCount();
+        DWORD timeSinceLastInput;
+        if (currentTickCount >= lii.dwTime)
+        {
+            timeSinceLastInput = currentTickCount - lii.dwTime;
+        }
+        else
+        {
+            timeSinceLastInput = (MAXDWORD - lii.dwTime) + currentTickCount + 1;
+        }
+
+        if (timeSinceLastInput < pauseAfterIdleSeconds * 1000)
+        {
+            spdlog::info("Capturing screenshot");
+            captureScreenshot();
+        }
+        else
+        {
+            spdlog::info("Skipping screenshot because no input was detected for {} seconds", timeSinceLastInput / 1000);
+        }
         std::this_thread::sleep_for(std::chrono::seconds(screenshotIntervalSeconds));
     }
 }
@@ -357,50 +344,92 @@ std::string FilePathSerializationStrategy::saveScreenshotToFile(std::filesystem:
     return outputFilepath;
 }
 
-void ScreenshotEventSourceConfig::validate()
-{
-    // Ensure output directory exists if using FilePath strategy
-    if (strategyType == ScreenshotSerializationStrategyType::FilePath &&
-        !std::filesystem::exists(this->screenshotOutputDirectory))
-    {
-        spdlog::info("The screenshot output directory '{}' did not exist. Creating it.",
-                     this->screenshotOutputDirectory.string());
-        bool didCreateSucceed = std::filesystem::create_directory(this->screenshotOutputDirectory);
-        if (!didCreateSucceed)
-        {
-            spdlog::error("Failed to create screenshot output directory at '{}'!",
-                          this->screenshotOutputDirectory.string());
-            throw std::runtime_error("Failed to create screenshot output directory");
-        }
-    }
-
-    // Ensure screenshot interval is at least 1 second
-    if (this->screenshotIntervalSeconds <= SCREENSHOT_MIN_INTERVAL)
-    {
-        spdlog::warn("Screenshot interval of {} seconds was passed. This is invalid, so the interval has been "
-                     "set to {} second.",
-                     this->screenshotIntervalSeconds, SCREENSHOT_MIN_INTERVAL);
-        this->screenshotIntervalSeconds = 1;
-    }
-}
-
-ScreenshotEventSourceConfig::ScreenshotEventSourceConfig()
-    : screenshotIntervalSeconds(5), screenshotOutputDirectory(std::filesystem::path("./replay-screenshots")),
-      strategyType(ScreenshotSerializationStrategyType::FilePath)
-{
-    validate();
-}
-
-ScreenshotEventSourceConfig::ScreenshotEventSourceConfig(uint32_t screenshotIntervalSeconds,
-                                                         std::filesystem::path screenshotOutputDirectory,
-                                                         ScreenshotSerializationStrategyType strategyType)
-    : screenshotIntervalSeconds(screenshotIntervalSeconds), screenshotOutputDirectory(screenshotOutputDirectory),
-      strategyType(strategyType)
-{
-    validate();
-};
-
 ScreenshotEventSource::~ScreenshotEventSource()
 {
     uninitializeSource();
+}
+
+ScreenshotEventSourceBuilder::ScreenshotEventSourceBuilder()
+{
+    screenshotIntervalSeconds = 30;
+    pauseAfterIdleSeconds = 30;
+    screenshotOutputDirectory = std::filesystem::path("./replay-screenshots");
+    serializationStrategyType = ScreenshotSerializationStrategyType::FilePath;
+}
+
+// TODO: Implement mechanism to support dynamic screenshotting (e.g., if the user swaps to a new application, we should
+// immediately take a screenshot, then proceed on an interval)
+ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withScreenshotIntervalSeconds(
+    uint32_t screenshotIntervalSeconds)
+{
+
+    if (screenshotIntervalSeconds <= 0)
+    {
+        spdlog::warn("Screenshot interval seconds of less than 0 was provided, using default of 30");
+        this->screenshotIntervalSeconds = 30;
+    }
+    else
+    {
+        this->screenshotIntervalSeconds = screenshotIntervalSeconds;
+    }
+
+    return *this;
+}
+
+ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withPauseAfterIdleSeconds(uint32_t pauseAfterIdleSeconds)
+{
+
+    this->pauseAfterIdleSeconds = max(pauseAfterIdleSeconds, 0);
+
+    return *this;
+}
+
+ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withScreenshotOutputDirectory(
+    std::filesystem::path screenshotOutputDirectory)
+{
+    this->screenshotOutputDirectory = screenshotOutputDirectory;
+    return *this;
+}
+
+ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withScreenshotSerializationStrategy(
+    ScreenshotSerializationStrategyType strategyType)
+{
+    this->serializationStrategyType = strategyType;
+    return *this;
+}
+
+std::unique_ptr<ScreenshotEventSource> ScreenshotEventSourceBuilder::build()
+{
+    validate();
+
+    std::unique_ptr<ScreenshotEventSource> source = std::make_unique<ScreenshotEventSource>();
+    source->screenshotIntervalSeconds = screenshotIntervalSeconds;
+    source->pauseAfterIdleSeconds = pauseAfterIdleSeconds;
+
+    switch (serializationStrategyType)
+    {
+    case ScreenshotSerializationStrategyType::FilePath:
+        source->serializationStrategy = std::make_unique<FilePathSerializationStrategy>(screenshotOutputDirectory);
+        break;
+    case ScreenshotSerializationStrategyType::Base64:
+        source->serializationStrategy = std::make_unique<Base64SerializationStrategy>();
+        break;
+    default:
+        throw std::runtime_error(RP_ERR_INVALID_SCREENSHOT_SERIALIZATION_STRATEGY);
+    }
+
+    return source;
+}
+
+void ScreenshotEventSourceBuilder::validate()
+{
+    if (serializationStrategyType == ScreenshotSerializationStrategyType::FilePath &&
+        !std::filesystem::exists(screenshotOutputDirectory))
+    {
+        if (!std::filesystem::create_directories(screenshotOutputDirectory))
+        {
+            spdlog::error("Failed to create screenshot output directory: {}", screenshotOutputDirectory.string());
+            throw std::runtime_error(RP_ERR_FAILED_TO_CREATE_SCREENSHOT_OUTPUT_DIRECTORY);
+        }
+    }
 }
