@@ -31,18 +31,17 @@ int main(int argc, char **argv)
 {
 
     std::signal(SIGINT, signalHandler);
-    // Create EventSink (receives events pertaining to the user's activity)
     g_eventSink = std::make_shared<EventSink>("out.txt");
-
+    
     // Create EventSources to monitor user activity
     auto inputEventSource = std::make_unique<UserInputEventSource>();
     auto windowActivityEventSource = std::make_unique<UserWindowActivityEventSource>();
-    auto screenshotEventSource = ScreenshotEventSourceBuilder()
-                                     .withScreenshotIntervalSeconds(60)
-                                     .withPauseAfterIdleSeconds(60)
-                                     .withScreenshotOutputDirectory(std::filesystem::path("./replay-screenshots"))
-                                     .withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType::FilePath)
-                                     .build();
+    auto screenshotEventSource =
+        ScreenshotEventSourceBuilder()
+            .withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType::FilePath)
+            .withScreenshotOutputDirectory(std::filesystem::path("./replay-screenshots"))
+            .withScreenshotTimingStrategy(std::make_unique<FixedIntervalScreenshotTimingStrategy>(5, 5))
+            .build();
 
     // Add sources to sink
     g_eventSink->addSource(std::move(inputEventSource));

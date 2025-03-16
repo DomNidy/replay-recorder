@@ -25,6 +25,59 @@ constexpr const wchar_t *SCREENSHOT_END_TOKEN = L"[/SCREENSHOT]";
 // Forward declarations
 class ScreenshotEventSource;
 
+enum class ScreenshotTimingStrategyType
+{
+    WindowChange,
+    FixedInterval
+};
+
+typedef bool (ScreenshotEventSource::*CaptureScreenshotFunction)();
+
+class ScreenshotTimingStrategy
+{
+  public:
+    virtual ~ScreenshotTimingStrategy() = default;
+    ScreenshotTimingStrategy() = default;
+
+    virtual bool screenshotThreadFunction(ScreenshotEventSource *source,
+                                          CaptureScreenshotFunction captureScreenshotFunction) const = 0;
+
+  protected:
+    // Get the time of the last input event
+    virtual bool isIdle(uint32_t idleThresholdSeconds) const;
+    virtual uint32_t getLastInputTime() const;
+    virtual uint32_t getCurrentTime() const;
+};
+
+// Take a screenshot whenever the user's window changes
+class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy
+{
+  public:
+    virtual bool screenshotThreadFunction(ScreenshotEventSource *source,
+                                          CaptureScreenshotFunction captureScreenshotFunction) const override;
+};
+
+// Take a screenshot every N seconds
+class FixedIntervalScreenshotTimingStrategy : public ScreenshotTimingStrategy
+{
+  public:
+    FixedIntervalScreenshotTimingStrategy(uint32_t intervalSeconds, uint32_t pauseAfterIdleSeconds)
+        : intervalSeconds(intervalSeconds), pauseAfterIdleSeconds(pauseAfterIdleSeconds)
+    {
+    }
+
+    virtual bool screenshotThreadFunction(ScreenshotEventSource *source,
+                                          CaptureScreenshotFunction captureScreenshotFunction) const override;
+
+  private:
+    // Number of seconds between screenshots
+    uint32_t intervalSeconds;
+
+    // Number of seconds that the user can be idle before we pause taking screenshots ("Idle" meaning that the
+    // user has not performed any keyboard or mouse input)
+    uint32_t pauseAfterIdleSeconds;
+};
+
 // Specifies the strategy for serializing screenshots
 // FilePath: Save the screenshot to a file and send the file path to the event sink.
 // Base64: Encode the screenshot as base64 and send it to the event sink.
@@ -40,6 +93,7 @@ enum class ScreenshotSerializationStrategyType
 class ScreenshotSerializationStrategy
 {
   public:
+    ScreenshotSerializationStrategy() = default;
     virtual ~ScreenshotSerializationStrategy() = default;
 
     // Serialize the screenshot and send it to the event sink
@@ -79,9 +133,15 @@ class Base64SerializationStrategy : public ScreenshotSerializationStrategy
 
 class ScreenshotEventSource : public EventSource
 {
+    // Make these classes friends so they can call captureScreenshot()
+    friend class FixedIntervalScreenshotTimingStrategy;
+    friend class WindowChangeScreenshotTimingStrategy;
+
   public:
     ScreenshotEventSource();
     ~ScreenshotEventSource();
+
+    bool getIsRunning() const;
 
   private:
     virtual void initializeSource(std::weak_ptr<EventSink> inSink) override;
@@ -89,20 +149,22 @@ class ScreenshotEventSource : public EventSource
 
     std::weak_ptr<EventSink> outputSink;
 
-    std::thread screenshotThread;
     // Whether or not the screenshotThread is currently capturing screenshots
     std::atomic<bool> isRunning;
 
-    void screenshotThreadFunction();
     bool captureScreenshot();
 
   private:
     friend class ScreenshotEventSourceBuilder;
+
+    // The thread that is capturing screenshots
+    std::thread screenshotThread;
+
     // Strategy for serializing screenshots
     std::unique_ptr<ScreenshotSerializationStrategy> serializationStrategy;
 
-    uint32_t screenshotIntervalSeconds;
-    uint32_t pauseAfterIdleSeconds;
+    // Strategy for deciding when to take screenshots
+    std::unique_ptr<ScreenshotTimingStrategy> timingStrategy;
 };
 
 class ScreenshotEventSourceBuilder
@@ -111,19 +173,22 @@ class ScreenshotEventSourceBuilder
     ScreenshotEventSourceBuilder();
     ~ScreenshotEventSourceBuilder() = default;
 
-    ScreenshotEventSourceBuilder &withScreenshotIntervalSeconds(uint32_t screenshotIntervalSeconds);
-    ScreenshotEventSourceBuilder &withPauseAfterIdleSeconds(uint32_t pauseAfterIdleSeconds);
     ScreenshotEventSourceBuilder &withScreenshotOutputDirectory(std::filesystem::path screenshotOutputDirectory);
-    ScreenshotEventSourceBuilder &withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType strategyType);
+    ScreenshotEventSourceBuilder &withScreenshotSerializationStrategy(
+        ScreenshotSerializationStrategyType serializationStrategyType);
+    ScreenshotEventSourceBuilder &withScreenshotTimingStrategy(
+        std::unique_ptr<ScreenshotTimingStrategy> timingStrategy);
     std::unique_ptr<ScreenshotEventSource> build();
 
   private:
     void validate();
 
-    uint32_t screenshotIntervalSeconds;
-    // Number of seconds that the user can be idle before we pause taking screenshots ("Idle" meaning that the
-    // user has not performed any keyboard or mouse input)
-    uint32_t pauseAfterIdleSeconds;
+    // The directory to save screenshots to (only used if serialization strategy is FilePath)
     std::filesystem::path screenshotOutputDirectory;
+
+    // Enum type for the strategy to use when serializing screenshots
     ScreenshotSerializationStrategyType serializationStrategyType;
+
+    // ScreenshotTimingStrategy instance to use, this determines when screenshots are taken
+    std::unique_ptr<ScreenshotTimingStrategy> timingStrategy;
 };

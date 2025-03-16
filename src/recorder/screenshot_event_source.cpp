@@ -13,32 +13,25 @@ static const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                    "abcdefghijklmnopqrstuvwxyz"
                                    "0123456789+/";
 
-// Base64 encoding implementation
 std::string Base64SerializationStrategy::encodeBase64(const BYTE *data, size_t dataLength) const
 {
     std::string encoded;
-    // Base64 encoding expands data by 4/3 (4 output chars for every 3 input bytes)
     encoded.reserve((dataLength + 2) / 3 * 4); // Reserve space for the base64 output
 
     // Process input data in chunks of 3 bytes
     for (size_t i = 0; i < dataLength; i += 3)
     {
-        // Get 3 bytes from input, use 0 for padding if we're at the end of the data
         uint32_t octet_a = i < dataLength ? data[i] : 0;         // First byte
         uint32_t octet_b = i + 1 < dataLength ? data[i + 1] : 0; // Second byte
         uint32_t octet_c = i + 2 < dataLength ? data[i + 2] : 0; // Third byte
 
-        // Combine 3 bytes (24 bits) into a single 24-bit value
         uint32_t triple = (octet_a << 16) | (octet_b << 8) | octet_c;
 
-        // Extract four 6-bit values from the 24-bit number using 0x3F (binary 111111) as a mask
-        // Each 6-bit value (0-63) is used as an index into the base64_chars array
-        encoded.push_back(base64_chars[(triple >> 18) & 0x3F]); // Extract bits 18-23
-        encoded.push_back(base64_chars[(triple >> 12) & 0x3F]); // Extract bits 12-17
+        encoded.push_back(base64_chars[(triple >> 18) & 0x3F]);
+        encoded.push_back(base64_chars[(triple >> 12) & 0x3F]);
 
-        // For the last two characters, use '=' padding if we don't have enough input data
-        encoded.push_back(i + 1 < dataLength ? base64_chars[(triple >> 6) & 0x3F] : '='); // Extract bits 6-11 or pad
-        encoded.push_back(i + 2 < dataLength ? base64_chars[triple & 0x3F] : '=');        // Extract bits 0-5 or pad
+        encoded.push_back(i + 1 < dataLength ? base64_chars[(triple >> 6) & 0x3F] : '=');
+        encoded.push_back(i + 2 < dataLength ? base64_chars[triple & 0x3F] : '=');
     }
 
     return encoded;
@@ -100,18 +93,25 @@ ScreenshotEventSource::ScreenshotEventSource() : outputSink(std::weak_ptr<EventS
 
 void ScreenshotEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
 {
+    assert(timingStrategy &&
+           "Screenshot timing strategy not set! This should never happen because the ScreenshotEventSourceBuilder "
+           "should always set it up (and we should only create ScreenshotEventSource with the builder)");
+
     if (inSink.expired())
     {
         throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
     outputSink = inSink;
 
-    spdlog::info("Initialized ScreenshotEventSource");
-    spdlog::info("\t Screenshot Interval (secs): {}", screenshotIntervalSeconds);
-
     // Start SS thread
     isRunning = true;
-    screenshotThread = std::thread(&ScreenshotEventSource::screenshotThreadFunction, this);
+
+    // Start up the screenshot thread and pass it a pointer to the captureScreenshot method, binding it to this
+    // ScreenshotEventSource
+    screenshotThread = std::thread(&ScreenshotTimingStrategy::screenshotThreadFunction, timingStrategy.get(), this,
+                                   &ScreenshotEventSource::captureScreenshot);
+
+    spdlog::info("ScreenshotEventSource successfully initialized");
 }
 
 void ScreenshotEventSource::uninitializeSource()
@@ -127,38 +127,9 @@ void ScreenshotEventSource::uninitializeSource()
     }
 }
 
-// Takes a screenshot then sleeps for interval seconds
-void ScreenshotEventSource::screenshotThreadFunction()
+bool ScreenshotEventSource::getIsRunning() const
 {
-    while (isRunning)
-    {
-        LASTINPUTINFO lii;
-        lii.cbSize = sizeof(LASTINPUTINFO);
-        GetLastInputInfo(&lii);
-
-        // Timer can wrap around after 49.7 days of system uptime, so we handle that case
-        DWORD currentTickCount = GetTickCount();
-        DWORD timeSinceLastInput;
-        if (currentTickCount >= lii.dwTime)
-        {
-            timeSinceLastInput = currentTickCount - lii.dwTime;
-        }
-        else
-        {
-            timeSinceLastInput = (MAXDWORD - lii.dwTime) + currentTickCount + 1;
-        }
-
-        if (timeSinceLastInput < pauseAfterIdleSeconds * 1000)
-        {
-            spdlog::info("Capturing screenshot");
-            captureScreenshot();
-        }
-        else
-        {
-            spdlog::info("Skipping screenshot because no input was detected for {} seconds", timeSinceLastInput / 1000);
-        }
-        std::this_thread::sleep_for(std::chrono::seconds(screenshotIntervalSeconds));
-    }
+    return isRunning;
 }
 
 bool ScreenshotEventSource::captureScreenshot()
@@ -351,37 +322,10 @@ ScreenshotEventSource::~ScreenshotEventSource()
 
 ScreenshotEventSourceBuilder::ScreenshotEventSourceBuilder()
 {
-    screenshotIntervalSeconds = 30;
-    pauseAfterIdleSeconds = 30;
+    // Defaults for the builder
     screenshotOutputDirectory = std::filesystem::path("./replay-screenshots");
     serializationStrategyType = ScreenshotSerializationStrategyType::FilePath;
-}
-
-// TODO: Implement mechanism to support dynamic screenshotting (e.g., if the user swaps to a new application, we should
-// immediately take a screenshot, then proceed on an interval)
-ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withScreenshotIntervalSeconds(
-    uint32_t screenshotIntervalSeconds)
-{
-
-    if (screenshotIntervalSeconds <= 0)
-    {
-        spdlog::warn("Screenshot interval seconds of less than 0 was provided, using default of 30");
-        this->screenshotIntervalSeconds = 30;
-    }
-    else
-    {
-        this->screenshotIntervalSeconds = screenshotIntervalSeconds;
-    }
-
-    return *this;
-}
-
-ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withPauseAfterIdleSeconds(uint32_t pauseAfterIdleSeconds)
-{
-
-    this->pauseAfterIdleSeconds = max(pauseAfterIdleSeconds, 0);
-
-    return *this;
+    timingStrategy = std::make_unique<FixedIntervalScreenshotTimingStrategy>(60, 60);
 }
 
 ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withScreenshotOutputDirectory(
@@ -398,13 +342,20 @@ ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withScreenshotSerial
     return *this;
 }
 
+ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withScreenshotTimingStrategy(
+    std::unique_ptr<ScreenshotTimingStrategy> timingStrategy)
+{
+    this->timingStrategy = std::move(timingStrategy);
+    return *this;
+}
+
 std::unique_ptr<ScreenshotEventSource> ScreenshotEventSourceBuilder::build()
 {
     validate();
 
     std::unique_ptr<ScreenshotEventSource> source = std::make_unique<ScreenshotEventSource>();
-    source->screenshotIntervalSeconds = screenshotIntervalSeconds;
-    source->pauseAfterIdleSeconds = pauseAfterIdleSeconds;
+
+    source->timingStrategy = std::move(timingStrategy);
 
     switch (serializationStrategyType)
     {
@@ -432,4 +383,66 @@ void ScreenshotEventSourceBuilder::validate()
             throw std::runtime_error(RP_ERR_FAILED_TO_CREATE_SCREENSHOT_OUTPUT_DIRECTORY);
         }
     }
+}
+
+bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(
+    ScreenshotEventSource *source, CaptureScreenshotFunction captureScreenshotFunction) const
+{
+    spdlog::info("Screenshot timing strategy: Fixed interval");
+    while (source && source->getIsRunning())
+    {
+
+        if (!isIdle(pauseAfterIdleSeconds))
+        {
+            spdlog::info("Capturing screenshot");
+            (source->*captureScreenshotFunction)();
+        }
+        else
+        {
+            uint32_t timeSinceLastInput = getCurrentTime() - getLastInputTime();
+            spdlog::info("Skipping screenshot because no input was detected for {} seconds", timeSinceLastInput / 1000);
+        }
+
+        std::this_thread::sleep_for(std::chrono::seconds(intervalSeconds));
+    }
+    return true;
+}
+
+bool WindowChangeScreenshotTimingStrategy::screenshotThreadFunction(
+    ScreenshotEventSource *source, CaptureScreenshotFunction captureScreenshotFunction) const
+{
+    spdlog::info("Screenshot timing strategy: Window change");
+    return true;
+}
+
+uint32_t ScreenshotTimingStrategy::getLastInputTime() const
+{
+    LASTINPUTINFO lii;
+    lii.cbSize = sizeof(LASTINPUTINFO);
+    GetLastInputInfo(&lii);
+    return lii.dwTime;
+}
+
+uint32_t ScreenshotTimingStrategy::getCurrentTime() const
+{
+    return GetTickCount();
+}
+
+bool ScreenshotTimingStrategy::isIdle(uint32_t idleThresholdSeconds) const
+{
+    uint32_t currentTime = getCurrentTime();
+    uint32_t lastInputTime = getLastInputTime();
+    uint32_t timeSinceLastInput;
+
+    // Handle wrap around edge case
+    if (currentTime >= lastInputTime)
+    {
+        timeSinceLastInput = currentTime - lastInputTime;
+    }
+    else
+    {
+        timeSinceLastInput = (MAXDWORD - lastInputTime) + currentTime + 1;
+    }
+
+    return timeSinceLastInput >= idleThresholdSeconds * 1000;
 }

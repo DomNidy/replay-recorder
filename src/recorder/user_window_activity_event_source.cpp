@@ -185,3 +185,4 @@ bool UserWindowActivityEventSource::getWindowTitle(HWND hWindow, std::string &de
     destStr = processName;
     return true;
 }
+
