@@ -4,6 +4,8 @@ add_library(recorder_lib STATIC
     user_input_event_source.cpp
     user_window_activity_event_source.cpp
     screenshot_event_source.cpp
+    screenshot_timing_strategy.cpp
+    screenshot_serialization_strategy.cpp
 )
 
 target_include_directories(recorder_lib
