@@ -8,7 +8,7 @@
 #include "spdlog/spdlog.h"
 #include "user_input_event_source.h"
 #include "user_window_activity_event_source.h"
-
+#include "windows_hook_manager.h"
 namespace
 {
 std::shared_ptr<EventSink> g_eventSink;
@@ -21,6 +21,7 @@ void signalHandler(int signal)
         spdlog::info("Gracefully shutting down...");
         if (g_eventSink)
         {
+            g_eventSink->uninitializeSink();
             g_eventSink.reset();
         }
         exit(0);
@@ -29,23 +30,30 @@ void signalHandler(int signal)
 
 int main(int argc, char **argv)
 {
+    // Initialize the windows hook manager (should be done before creating any event sources and in the main thread)
+    WindowsHookManager::getInstance();
 
+    spdlog::set_level(spdlog::level::debug);
     std::signal(SIGINT, signalHandler);
+
+    // Initialize event sink
     g_eventSink = std::make_shared<EventSink>("out.txt");
+
+    spdlog::debug("Main thread id: {}", GetCurrentThreadId());
 
     // Create EventSources to monitor user activity
     auto inputEventSource = std::make_unique<UserInputEventSource>();
-    auto windowActivityEventSource = std::make_unique<UserWindowActivityEventSource>();
+    // auto windowActivityEventSource = std::make_shared<UserWindowActivityEventSource>();
     auto screenshotEventSource =
         ScreenshotEventSourceBuilder()
             .withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType::FilePath)
+            .withScreenshotTimingStrategy(std::make_shared<WindowChangeScreenshotTimingStrategy>(60, 60, 5))
             .withScreenshotOutputDirectory(std::filesystem::path("./replay-screenshots"))
-            .withScreenshotTimingStrategy(std::make_unique<FixedIntervalScreenshotTimingStrategy>(60, 60))
             .build();
 
     // Add sources to sink
     g_eventSink->addSource(std::move(inputEventSource));
-    g_eventSink->addSource(std::move(windowActivityEventSource));
+    // g_eventSink->addSource(std::move(windowActivityEventSource));
     g_eventSink->addSource(std::move(screenshotEventSource));
 
     BOOL ret;

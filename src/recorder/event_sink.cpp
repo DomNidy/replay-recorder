@@ -22,10 +22,12 @@ EventSink::~EventSink()
     }
 }
 
-void EventSink::addSource(std::unique_ptr<EventSource> source)
+void EventSink::addSource(std::shared_ptr<EventSource> source)
 {
+    // Initialize the source with a pointer to this EventSink
+    spdlog::debug("-- EventSink: Adding a source... --");
     source->initializeSource(shared_from_this());
-    sources.push_back(std::move(source));
+    sources.push_back(source);
 }
 
 EventSink &EventSink::operator<<(const char *data)
@@ -60,6 +62,15 @@ EventSink &EventSink::operator<<(const wchar_t *data)
     recordingBuffer.insert(recordingBuffer.end(), data, (data + len));
     _flushIfMaxSizeExceeded();
     return *this;
+}
+
+void EventSink::uninitializeSink()
+{
+    spdlog::debug("Uninitializing EventSink");
+    for (auto &source : sources)
+    {
+        source->uninitializeSource();
+    }
 }
 
 inline void EventSink::_flushData()

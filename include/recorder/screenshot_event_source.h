@@ -19,6 +19,10 @@
 
 class ScreenshotEventSource : public EventSource
 {
+    // These classes need access to the captureScreenshot method
+    friend class WindowChangeScreenshotTimingStrategy;
+    friend class FixedIntervalScreenshotTimingStrategy;
+
   public:
     ScreenshotEventSource();
     ~ScreenshotEventSource();
@@ -46,7 +50,7 @@ class ScreenshotEventSource : public EventSource
     std::unique_ptr<ScreenshotSerializationStrategy> serializationStrategy;
 
     // Strategy for deciding when to take screenshots
-    std::unique_ptr<ScreenshotTimingStrategy> timingStrategy;
+    std::shared_ptr<ScreenshotTimingStrategy> timingStrategy;
 };
 
 class ScreenshotEventSourceBuilder
@@ -59,7 +63,7 @@ class ScreenshotEventSourceBuilder
     ScreenshotEventSourceBuilder &withScreenshotSerializationStrategy(
         ScreenshotSerializationStrategyType serializationStrategyType);
     ScreenshotEventSourceBuilder &withScreenshotTimingStrategy(
-        std::unique_ptr<ScreenshotTimingStrategy> timingStrategy);
+        std::shared_ptr<ScreenshotTimingStrategy> timingStrategy);
     std::unique_ptr<ScreenshotEventSource> build();
 
   private:
@@ -72,5 +76,5 @@ class ScreenshotEventSourceBuilder
     ScreenshotSerializationStrategyType serializationStrategyType;
 
     // ScreenshotTimingStrategy instance to use, this determines when screenshots are taken
-    std::unique_ptr<ScreenshotTimingStrategy> timingStrategy;
+    std::shared_ptr<ScreenshotTimingStrategy> timingStrategy;
 };

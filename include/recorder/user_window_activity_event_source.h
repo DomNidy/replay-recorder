@@ -5,8 +5,9 @@
 #include <string>
 
 #include "event_source.h"
+#include "windows_hook_manager.h"
 
-class UserWindowActivityEventSource : public EventSource
+class UserWindowActivityEventSource : public EventSource, public WindowsForegroundHookListener
 {
 
   public:
@@ -26,11 +27,6 @@ class UserWindowActivityEventSource : public EventSource
     bool getWindowTitle(HWND hWindow, std::string &destStr);
 
   private:
-    // Hook procedure that is executed in response to window events
-    static void CALLBACK WinEventProc(HWINEVENTHOOK hWinEventHook, DWORD event, HWND hWnd, LONG idObject, LONG idChild,
-                                      DWORD dwEventThread, DWORD dwmsEventTime);
-
-    // Store the haandle to the WinEventProc
-    // static bc Windows API
-    static HWINEVENTHOOK hWinEventHook;
+    void onForegroundEvent(HWINEVENTHOOK hWinEventHook, DWORD event, HWND hWnd, LONG idObject, LONG idChild,
+                           DWORD dwEventThread, DWORD dwmsEventTime) override;
 };

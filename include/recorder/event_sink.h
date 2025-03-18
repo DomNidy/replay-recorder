@@ -26,15 +26,21 @@ class EventSink : public std::enable_shared_from_this<EventSink>
   public:
     EventSink(const std::string &name);
     ~EventSink();
-  
+
     EventSink &operator<<(const char *data);
     EventSink &operator<<(const wchar_t *data);
 
     // Add a source to receive events from (e.g., user input events)
-    void addSource(std::unique_ptr<EventSource> source);
+    void addSource(std::shared_ptr<EventSource> source);
+
+    // Cleans up all the event sources
+    void uninitializeSink();
 
   private:
-    std::vector<std::unique_ptr<EventSource>> sources;
+    // Vector of weak pointers to event sources
+    // Need to be weak pointers to avoid circular references. Starting to think that maybe this C++ language isn't for
+    // me...
+    std::vector<std::shared_ptr<EventSource>> sources;
 
     // Checks buffer size and calls _flushData() it if its too big
     inline void _flushIfMaxSizeExceeded();

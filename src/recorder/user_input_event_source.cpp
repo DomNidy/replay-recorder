@@ -49,7 +49,12 @@ void UserInputEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
 
 void UserInputEventSource::uninitializeSource()
 {
-    assert(hKeyboardHook != NULL);
+    if (hKeyboardHook == NULL)
+    {
+        spdlog::warn("UserInputEventSource::uninitializeSource: Keyboard hook was already unhooked, this is expected "
+                     "because the EventSink uninitializes all sources when it is uninitialized. But this design is "
+                     "scuffed, warning so I remember to fix it later.");
+    }
 
     UnhookWindowsHookEx(hKeyboardHook);
     hKeyboardHook = NULL;
@@ -57,7 +62,7 @@ void UserInputEventSource::uninitializeSource()
     spdlog::info("UserInputEventSource successfully uninstalled keyboard hook");
 }
 
-bool handleSpecialkey(int vkCode, EventSink *outputSink)
+bool handleSpecialKey(int vkCode, EventSink *outputSink)
 {
     switch (vkCode)
     {
@@ -92,6 +97,7 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
 {
 
     UserInputEventSource *instance = currentInstance;
+    auto lockedSink = instance->outputSink.lock();
 
     assert(instance != nullptr &&
            "UserInputEventSource::KeyboardProc ran, but currentInstance was nullptr. This should "
@@ -117,7 +123,7 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
                 // false
                 if (!leftAltPressed)
                 {
-                    *currentInstance->outputSink.lock() << "[TAB]";
+                    *lockedSink << "[TAB]";
                     tabPressed = false;
                 }
                 else
@@ -129,17 +135,17 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
             // Handle ALT+TAB
             if (leftAltPressed && tabPressed)
             {
-                *currentInstance->outputSink.lock() << "[ALT+TAB]";
+                *lockedSink << "[ALT+TAB]";
             }
             // Handle special key or everything else
-            else if (!handleSpecialkey(pKeyboard->vkCode, currentInstance->outputSink.lock().get()))
+            else if (!handleSpecialKey(pKeyboard->vkCode, lockedSink.get()))
             {
                 // If we get here and alt is pressed, that means that left alt was/is
                 // pressed, and the key that followed it was not TAB, so we'll just
                 // treat it as another combination (this is scuffed)
                 if (leftAltPressed)
                 {
-                    *currentInstance->outputSink.lock() << "[ALT]";
+                    *lockedSink << "[ALT]";
                 }
 
                 wchar_t unicodeBuffer[2] = {0};
@@ -179,7 +185,7 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
                     // If all of the chars were printable, then send them to output sink
                     if (i == len)
                     {
-                        *currentInstance->outputSink.lock() << unicodeBuffer;
+                        *lockedSink << unicodeBuffer;
                     }
                 }
             }

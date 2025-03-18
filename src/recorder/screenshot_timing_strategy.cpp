@@ -4,9 +4,7 @@
 #include <vector>
 #include "screenshot_event_source.h"
 
-
-bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(
-    ScreenshotEventSource *source, CaptureScreenshotFunction captureScreenshotFunction) const
+bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotEventSource *source)
 {
     spdlog::info("Screenshot timing strategy: Fixed interval");
     while (source && source->getIsRunning())
@@ -15,7 +13,7 @@ bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(
         if (!isIdle(pauseAfterIdleSeconds))
         {
             spdlog::info("Capturing screenshot");
-            (source->*captureScreenshotFunction)();
+            source->captureScreenshot();
         }
         else
         {
@@ -28,11 +26,46 @@ bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(
     return true;
 }
 
-bool WindowChangeScreenshotTimingStrategy::screenshotThreadFunction(
-    ScreenshotEventSource *source, CaptureScreenshotFunction captureScreenshotFunction) const
+bool WindowChangeScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotEventSource *source)
 {
-    spdlog::info("Screenshot timing strategy: Window change");
+    spdlog::debug("Screenshot timing strategy: Window change, trying to register hook...");
+
+    WindowsHookManager::getInstance().registerForegroundHookListener(shared_from_this());
+
+    spdlog::debug("WindowChangeScreenshotTimingStrategy: Hook installed successfully");
+
     return true;
+}
+
+void WindowChangeScreenshotTimingStrategy::onForegroundEvent(HWINEVENTHOOK hWinEventHook, DWORD event, HWND hWnd,
+                                                             LONG idObject, LONG idChild, DWORD dwEventThread,
+                                                             DWORD dwmsEventTime)
+{
+    spdlog::debug("--- WindowChangeScreenshotTimingStrategy: onForegroundEvent called with event: {} ----", event);
+
+    if (source.has_value())
+    {
+        spdlog::debug("WindowChangeScreenshotTimingStrategy: onForegroundEvent called thread id: {}",
+                      GetCurrentThreadId());
+        uint32_t timeSinceLastWindowChange = dwmsEventTime - lastWindowChangeScreenshotTime;
+        if (timeSinceLastWindowChange >= windowChangeDebounceSeconds * 1000)
+        {
+            lastWindowChangeScreenshotTime = dwmsEventTime;
+            // do a little delay before ss to ensure it captures the new window
+            std::this_thread::sleep_for(std::chrono::milliseconds(1250));
+            source.value()->captureScreenshot();
+        }
+    }
+    spdlog::debug("--- WindowChangeScreenshotTimingStrategy: onForegroundEvent finished ----");
+}
+
+WindowChangeScreenshotTimingStrategy::~WindowChangeScreenshotTimingStrategy()
+{
+    spdlog::debug("WindowChangeScreenshotTimingStrategy: Destructor called, trying to unregister hook...");
+
+    // TODO: THIS THROWS A BAD WEAK PTR EXCEPTION, ITS BC OF THE USAGE OF SHARED_FROM_THIS. MAYBE NOT GOOD TO CALL IT IN
+    // DESTRUCTOR???
+    // WindowsHookManager::getInstance().unregisterForegroundHookListener(shared_from_this());
 }
 
 uint32_t ScreenshotTimingStrategy::getLastInputTime() const

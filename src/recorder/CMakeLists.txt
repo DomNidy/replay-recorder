@@ -6,6 +6,7 @@ add_library(recorder_lib STATIC
     screenshot_event_source.cpp
     screenshot_timing_strategy.cpp
     screenshot_serialization_strategy.cpp
+    windows_hook_manager.cpp
 )
 
 target_include_directories(recorder_lib

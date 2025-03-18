@@ -27,8 +27,7 @@ void ScreenshotEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
 
     // Start up the screenshot thread and pass it a pointer to the captureScreenshot method, binding it to this
     // ScreenshotEventSource
-    screenshotThread = std::thread(&ScreenshotTimingStrategy::screenshotThreadFunction, timingStrategy.get(), this,
-                                   &ScreenshotEventSource::captureScreenshot);
+    screenshotThread = std::thread(&ScreenshotTimingStrategy::screenshotThreadFunction, timingStrategy.get(), this);
 
     spdlog::info("ScreenshotEventSource successfully initialized");
 }
@@ -40,7 +39,12 @@ void ScreenshotEventSource::uninitializeSource()
         isRunning = false;
         if (screenshotThread.joinable())
         {
+            spdlog::debug("ScreenshotEventSource: Screenshot thread is joinable, joining it");
             screenshotThread.join();
+        }
+        else
+        {
+            spdlog::debug("ScreenshotEventSource: Screenshot thread is not joinable, it is already joined");
         }
         spdlog::info("ScreenshotEventSource uninitialized");
     }
@@ -225,9 +229,9 @@ ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withScreenshotSerial
 }
 
 ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withScreenshotTimingStrategy(
-    std::unique_ptr<ScreenshotTimingStrategy> timingStrategy)
+    std::shared_ptr<ScreenshotTimingStrategy> timingStrategy)
 {
-    this->timingStrategy = std::move(timingStrategy);
+    this->timingStrategy = timingStrategy;
     return *this;
 }
 
@@ -237,7 +241,15 @@ std::unique_ptr<ScreenshotEventSource> ScreenshotEventSourceBuilder::build()
 
     std::unique_ptr<ScreenshotEventSource> source = std::make_unique<ScreenshotEventSource>();
 
-    source->timingStrategy = std::move(timingStrategy);
+    // Give source a pointer to its timing strategy to use
+    source->timingStrategy = timingStrategy;
+
+    if (auto windowChangeTimingStrategy =
+            dynamic_cast<WindowChangeScreenshotTimingStrategy *>(source->timingStrategy.get()))
+    {
+        spdlog::debug("ScreenshotEventSourceBuilder::build: Setting timing strategy to window change");
+        windowChangeTimingStrategy->source = source.get();
+    }
 
     switch (serializationStrategyType)
     {
@@ -251,7 +263,7 @@ std::unique_ptr<ScreenshotEventSource> ScreenshotEventSourceBuilder::build()
         throw std::runtime_error(RP_ERR_INVALID_SCREENSHOT_SERIALIZATION_STRATEGY);
     }
 
-    return source;
+    return std::move(source);
 }
 
 void ScreenshotEventSourceBuilder::validate()
