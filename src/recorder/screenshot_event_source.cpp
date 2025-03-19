@@ -232,8 +232,8 @@ bool ScreenshotEventSource::captureScreenshot()
     // Use the serialization strategy to process the screenshot
     if (serializationStrategy)
     {
-        result = serializationStrategy->serializeScreenshot(this, outputSink.lock().get(), rgbData, monitorWidth,
-                                                            monitorHeight, 3);
+        result =
+            serializationStrategy->serializeScreenshot(this, lockedSink.get(), rgbData, monitorWidth, monitorHeight, 3);
     }
     else
     {

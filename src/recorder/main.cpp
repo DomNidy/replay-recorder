@@ -20,8 +20,6 @@ void signalHandler(int signal)
     {
         spdlog::info("--- Gracefully shutting down in thread {} ---", GetCurrentThreadId());
 
-        // TODO: THIS SEEMS BAD BECAUSE THE SCREENSHOT EVENT SOURCE MIGHT GET UNINITIALIZED WHILE A SCREENSHOT IS BEING
-        // TAKEN AND THROW AN ERROR
         if (g_eventSink)
         {
             g_eventSink->uninitializeSink();
