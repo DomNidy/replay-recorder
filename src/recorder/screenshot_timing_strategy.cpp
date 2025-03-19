@@ -65,10 +65,6 @@ void WindowChangeScreenshotTimingStrategy::onForegroundEvent(HWINEVENTHOOK hWinE
 WindowChangeScreenshotTimingStrategy::~WindowChangeScreenshotTimingStrategy()
 {
     spdlog::debug("WindowChangeScreenshotTimingStrategy: Destructor called, trying to unregister hook...");
-
-    // TODO: THIS THROWS A BAD WEAK PTR EXCEPTION, ITS BC OF THE USAGE OF SHARED_FROM_THIS. MAYBE NOT GOOD TO CALL IT IN
-    // DESTRUCTOR???
-    // WindowsHookManager::getInstance().unregisterForegroundHookListener(shared_from_this());
 }
 
 uint32_t ScreenshotTimingStrategy::getLastInputTime() const

@@ -14,10 +14,7 @@ class UserInputEventSource : public EventSource
 {
   public:
     UserInputEventSource() = default;
-    ~UserInputEventSource()
-    {
-        uninitializeSource();
-    }
+    ~UserInputEventSource();
 
   private:
     //~ Begin EventSource interface

@@ -18,7 +18,10 @@ void signalHandler(int signal)
 {
     if (signal == SIGINT)
     {
-        spdlog::info("Gracefully shutting down...");
+        spdlog::info("--- Gracefully shutting down in thread {} ---", GetCurrentThreadId());
+
+        // TODO: THIS SEEMS BAD BECAUSE THE SCREENSHOT EVENT SOURCE MIGHT GET UNINITIALIZED WHILE A SCREENSHOT IS BEING
+        // TAKEN AND THROW AN ERROR
         if (g_eventSink)
         {
             g_eventSink->uninitializeSink();
@@ -30,11 +33,11 @@ void signalHandler(int signal)
 
 int main(int argc, char **argv)
 {
-    // Initialize the windows hook manager (should be done before creating any event sources and in the main thread)
-    WindowsHookManager::getInstance();
-
     spdlog::set_level(spdlog::level::debug);
     std::signal(SIGINT, signalHandler);
+
+    // Initialize the windows hook manager (should be done before creating any event sources and in the main thread)
+    WindowsHookManager::getInstance();
 
     // Initialize event sink
     g_eventSink = std::make_shared<EventSink>("out.txt");

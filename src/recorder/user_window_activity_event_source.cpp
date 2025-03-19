@@ -6,6 +6,20 @@
 
 #include "event_sink.h"
 
+UserWindowActivityEventSource::~UserWindowActivityEventSource()
+{
+    spdlog::debug("UserWindowActivityEventSource::~UserWindowActivityEventSource: Destructor called");
+}
+
+void UserWindowActivityEventSource::uninitializeSource()
+{
+    spdlog::debug("Uninitializing UserWindowActivityEventSource in thread id: {}", GetCurrentThreadId());
+
+    WindowsHookManager::getInstance().unregisterForegroundHookListener(shared_from_this());
+
+    spdlog::info("UserWindowActivityEventSource successfully unregistered from WindowsHookManager");
+}
+
 // Date formatting utility functions
 // move this to a util lib or header
 std::string _formatTimestampGetOrdinalDay(int day)
@@ -114,16 +128,6 @@ void UserWindowActivityEventSource::initializeSource(std::weak_ptr<EventSink> in
     // Add windows hook
     WindowsHookManager::getInstance().registerForegroundHookListener(shared_from_this());
     spdlog::debug("UserWindowActivityEventSource successfully installed window event hook");
-}
-
-void UserWindowActivityEventSource::uninitializeSource()
-{
-    spdlog::debug("UserWindowActivityEventSource::uninitializeSource: Uninstalling window event hook in thread id: {}",
-                  GetCurrentThreadId());
-
-    WindowsHookManager::getInstance().unregisterForegroundHookListener(shared_from_this());
-
-    spdlog::info("UserWindowActivityEventSource successfully uninstalled window event hook");
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wineventproc

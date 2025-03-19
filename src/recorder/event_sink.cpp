@@ -66,7 +66,7 @@ EventSink &EventSink::operator<<(const wchar_t *data)
 
 void EventSink::uninitializeSink()
 {
-    spdlog::debug("Uninitializing EventSink");
+    spdlog::debug("Uninitializing EventSink in thread {}", GetCurrentThreadId());
     for (auto &source : sources)
     {
         source->uninitializeSource();

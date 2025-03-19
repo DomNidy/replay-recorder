@@ -15,6 +15,11 @@ UserInputEventSource *currentInstance = nullptr;
 bool leftAltPressed = false;
 bool tabPressed = false;
 
+UserInputEventSource::~UserInputEventSource()
+{
+    spdlog::debug("UserInputEventSource::~UserInputEventSource: Destructor called in thread {}", GetCurrentThreadId());
+}
+
 void UserInputEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
 {
     outputSink = inSink;
@@ -49,6 +54,7 @@ void UserInputEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
 
 void UserInputEventSource::uninitializeSource()
 {
+    spdlog::debug("Uninitializing UserInputEventSource in thread {}", GetCurrentThreadId());
     if (hKeyboardHook == NULL)
     {
         spdlog::warn("UserInputEventSource::uninitializeSource: Keyboard hook was already unhooked, this is expected "

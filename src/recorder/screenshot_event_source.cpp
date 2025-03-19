@@ -10,6 +10,12 @@ ScreenshotEventSource::ScreenshotEventSource() : outputSink(std::weak_ptr<EventS
 {
 }
 
+ScreenshotEventSource::~ScreenshotEventSource()
+{
+    spdlog::debug("ScreenshotEventSource::~ScreenshotEventSource: Destructor called");
+    // uninitializeSource();
+}
+
 void ScreenshotEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
 {
     assert(timingStrategy &&
@@ -34,6 +40,7 @@ void ScreenshotEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
 
 void ScreenshotEventSource::uninitializeSource()
 {
+    spdlog::debug("Uninitializing ScreenshotEventSource in thread {}", GetCurrentThreadId());
     if (isRunning)
     {
         isRunning = false;
@@ -57,6 +64,17 @@ bool ScreenshotEventSource::getIsRunning() const
 
 bool ScreenshotEventSource::captureScreenshot()
 {
+    // Lock sink so we can use it to prevent it from getting destroyed while we're using it
+    auto lockedSink = outputSink.lock();
+    if (!lockedSink)
+    {
+        spdlog::warn(
+            "ScreenshotEventSource::captureScreenshot: captureScreenshot ran, but the output EventSink was already "
+            "expired. We "
+            "won't be able to serialize this screenshot. Warning so I remember to fix this (and make it better)");
+        return false;
+    }
+
     // Get screen dimensions
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
@@ -180,14 +198,14 @@ bool ScreenshotEventSource::captureScreenshot()
 
     bool result = false;
     // Use the serialization strategy to process the screenshot
-    if (!outputSink.expired() && serializationStrategy)
+    if (serializationStrategy)
     {
-        result = serializationStrategy->serializeScreenshot(this, outputSink.lock().get(), rgbData, screenWidth,
-                                                            screenHeight, 3);
+        result =
+            serializationStrategy->serializeScreenshot(this, lockedSink.get(), rgbData, screenWidth, screenHeight, 3);
     }
     else
     {
-        spdlog::error("Cannot serialize screenshot: Sink or strategy is null");
+        spdlog::error("Cannot serialize screenshot: SerializationStrategy is null");
     }
 
     // Clean up
@@ -199,11 +217,6 @@ bool ScreenshotEventSource::captureScreenshot()
     ReleaseDC(NULL, screenDC);
 
     return result;
-}
-
-ScreenshotEventSource::~ScreenshotEventSource()
-{
-    uninitializeSource();
 }
 
 ScreenshotEventSourceBuilder::ScreenshotEventSourceBuilder()

@@ -12,10 +12,7 @@ class UserWindowActivityEventSource : public EventSource, public WindowsForegrou
 
   public:
     UserWindowActivityEventSource() = default;
-    ~UserWindowActivityEventSource()
-    {
-        uninitializeSource();
-    }
+    ~UserWindowActivityEventSource();
 
   private:
     virtual void initializeSource(std::weak_ptr<EventSink> inSink) override;

@@ -47,6 +47,11 @@ class FilePathSerializationStrategy : public ScreenshotSerializationStrategy
     {
     }
 
+    ~FilePathSerializationStrategy()
+    {
+        spdlog::debug("FilePathSerializationStrategy::~FilePathSerializationStrategy: Destructor called");
+    }
+
     virtual bool serializeScreenshot(const ScreenshotEventSource *source, EventSink *sink, const BYTE *imageData,
                                      int width, int height, int channels) const override;
 
@@ -67,4 +72,4 @@ class Base64SerializationStrategy : public ScreenshotSerializationStrategy
   private:
     // Helper method to encode binary data to base64
     std::string encodeBase64(const BYTE *data, size_t dataLength) const;
-}; 
+};

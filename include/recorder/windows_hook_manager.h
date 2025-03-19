@@ -46,5 +46,5 @@ class WindowsHookManager
                                                 LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime);
 
     WindowsHookManager();
-    ~WindowsHookManager() = default;
+    ~WindowsHookManager();
 };
