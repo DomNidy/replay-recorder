@@ -58,7 +58,7 @@ class ScreenshotTimingStrategy
 // t=11s: Window change → Screenshot taken (>5s since last window change screenshot)
 class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy, public WindowsForegroundHookListener
 {
-    friend class ScreenshotEventSourceBuilder; // needs to update static members
+    friend class ScreenshotEventSourceBuilder; // needs to update source ptr
   public:
     WindowChangeScreenshotTimingStrategy(uint32_t intervalSeconds, uint32_t pauseAfterIdleSeconds,
                                          uint32_t windowChangeDebounceSeconds)

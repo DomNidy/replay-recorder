@@ -4,11 +4,6 @@
 #include <memory>
 #include <vector>
 
-// The function type that we will call from inside the windows hook. Event sources must create a function matching this
-// signature and the hook manager will call it.
-using WinHookCallbackFuncType = void (*)(HWINEVENTHOOK hWinEventHook, DWORD event, HWND hWnd, LONG idObject,
-                                         LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime);
-
 // ABC that any EventSource that wants to receive windows foreground hook events must implement
 class WindowsForegroundHookListener : public std::enable_shared_from_this<WindowsForegroundHookListener>
 {

@@ -20,5 +20,6 @@ CMakeUserPresets.json
 *.vcxproj.filters
 
 .vscode
+.cursor
 
 out.txt

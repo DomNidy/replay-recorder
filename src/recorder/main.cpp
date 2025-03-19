@@ -43,7 +43,7 @@ int main(int argc, char **argv)
 
     // Create EventSources to monitor user activity
     auto inputEventSource = std::make_unique<UserInputEventSource>();
-    // auto windowActivityEventSource = std::make_shared<UserWindowActivityEventSource>();
+    auto windowActivityEventSource = std::make_shared<UserWindowActivityEventSource>();
     auto screenshotEventSource =
         ScreenshotEventSourceBuilder()
             .withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType::FilePath)
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
 
     // Add sources to sink
     g_eventSink->addSource(std::move(inputEventSource));
-    // g_eventSink->addSource(std::move(windowActivityEventSource));
+    g_eventSink->addSource(std::move(windowActivityEventSource));
     g_eventSink->addSource(std::move(screenshotEventSource));
 
     BOOL ret;
