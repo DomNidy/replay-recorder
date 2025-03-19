@@ -62,6 +62,29 @@ bool ScreenshotEventSource::getIsRunning() const
     return isRunning;
 }
 
+std::optional<MONITORINFO> ScreenshotEventSource::getFocusedMonitorInfo()
+{
+    HWND foregroundWindow = GetForegroundWindow();
+    if (!foregroundWindow)
+    {
+        spdlog::warn("ScreenshotEventSource::getFocusedMonitorInfo: GetForegroundWindow() returned null. This can "
+                     "happen when a window loses activation.");
+        return std::nullopt;
+    }
+
+    HMONITOR monitor = MonitorFromWindow(foregroundWindow, MONITOR_DEFAULTTONEAREST);
+
+    MONITORINFO monitorInfo;
+    monitorInfo.cbSize = sizeof(MONITORINFO);
+    if (!GetMonitorInfo(monitor, &monitorInfo))
+    {
+        spdlog::warn("ScreenshotEventSource::getFocusedMonitorInfo: Failed to get monitor info with GetMonitorInfo()");
+        return std::nullopt;
+    }
+
+    return monitorInfo;
+}
+
 bool ScreenshotEventSource::captureScreenshot()
 {
     // Lock sink so we can use it to prevent it from getting destroyed while we're using it
@@ -75,9 +98,25 @@ bool ScreenshotEventSource::captureScreenshot()
         return false;
     }
 
-    // Get screen dimensions
-    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    // Try to get the monitor the focused window is in
+    std::optional<MONITORINFO> _monitorInfo = getFocusedMonitorInfo();
+    if (!_monitorInfo.has_value())
+    {
+        spdlog::warn("ScreenshotEventSource::captureScreenshot: getFocusedMonitorInfo() failed to get the monitor that "
+                     "the focused window is in. Skipping screenshot.");
+        return false;
+    }
+
+    MONITORINFO monitorInfo = _monitorInfo.value();
+
+    // Get the monitor dimensions
+    int monitorX = monitorInfo.rcMonitor.left;
+    int monitorY = monitorInfo.rcMonitor.top;
+    int monitorWidth = monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left;
+    int monitorHeight = monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top;
+
+    spdlog::debug("ScreenshotEventSource::captureScreenshot: Capturing monitor at ({}, {}) with dimensions {}x{}",
+                  monitorX, monitorY, monitorWidth, monitorHeight);
 
     // Create a device context (DC) for the entire screen
     // Device contexts sort of act like fd's and we use them
@@ -103,41 +142,34 @@ bool ScreenshotEventSource::captureScreenshot()
     }
 
     // Create a bitmap compatible with the screen DC
-    // "Compatibility" is important because different screens might have
-    // different color depths or different internal representations of color
-    // The color format of the bitmap created by the CreateCompatibleBitmap function matches the color format of the
-    // device identified by the hdc parameter. This bitmap can be selected into any memory device context that is
-    // compatible with the original device.
-    HBITMAP bitmap = CreateCompatibleBitmap(screenDC, screenWidth, screenHeight);
+    HBITMAP bitmap = CreateCompatibleBitmap(screenDC, monitorWidth, monitorHeight);
     if (!bitmap)
     {
         spdlog::error("Failed to create compatible bitmap");
-        DeleteDC(memDC);           // Clean up memDC
-        ReleaseDC(NULL, screenDC); // Clean up screenDC
+        DeleteDC(memDC);
+        ReleaseDC(NULL, screenDC);
         return false;
     }
 
-    // Select the bitmap into the memory DC.
-    // Essentially, we're telling the memory DC that all subsequent drawing operations should operate on the bitmap that
-    // we pass it. Sort of similar to how OpenGL is a state machine.
+    // Select the bitmap into the memory DC
     HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, bitmap);
     if (!oldBitmap)
     {
         spdlog::error("Failed to select object into DC");
-        DeleteObject(bitmap);      // Clean up bitmap
-        DeleteDC(memDC);           // Clean up memDC
-        ReleaseDC(NULL, screenDC); // Clean up screenDC
+        DeleteObject(bitmap);
+        DeleteDC(memDC);
+        ReleaseDC(NULL, screenDC);
         return false;
     }
 
-    // BitBlt the screen content into the memory DC's selected bitmap
-    if (!BitBlt(memDC, 0, 0, screenWidth, screenHeight, screenDC, 0, 0, SRCCOPY))
+    // BitBlt the specific monitor content into the memory DC's selected bitmap
+    if (!BitBlt(memDC, 0, 0, monitorWidth, monitorHeight, screenDC, monitorX, monitorY, SRCCOPY))
     {
         spdlog::error("Failed to BitBlt: {}", GetLastError());
-        SelectObject(memDC, oldBitmap); // Restore old bitmap
-        DeleteObject(bitmap);           // Clean up bitmap
-        DeleteDC(memDC);                // Clean up memDC
-        ReleaseDC(NULL, screenDC);      // Clean up screenDC
+        SelectObject(memDC, oldBitmap);
+        DeleteObject(bitmap);
+        DeleteDC(memDC);
+        ReleaseDC(NULL, screenDC);
         return false;
     }
 
@@ -145,51 +177,51 @@ bool ScreenshotEventSource::captureScreenshot()
     BITMAPINFOHEADER bi;
     ZeroMemory(&bi, sizeof(BITMAPINFOHEADER));
     bi.biSize = sizeof(BITMAPINFOHEADER);
-    bi.biWidth = screenWidth;
-    bi.biHeight = -screenHeight; // Negative height = top-down DIB
+    bi.biWidth = monitorWidth;
+    bi.biHeight = -monitorHeight; // Negative height = top-down DIB
     bi.biPlanes = 1;
     bi.biBitCount = 24; // 24 bits per pixel (RGB)
     bi.biCompression = BI_RGB;
 
     // Allocate memory for bitmap bits
-    BYTE *pixels = new (std::nothrow) BYTE[screenWidth * screenHeight * 3]; // 3 bytes per pixel (RGB)
+    BYTE *pixels = new (std::nothrow) BYTE[monitorWidth * monitorHeight * 3]; // 3 bytes per pixel (RGB)
     if (!pixels)
     {
         spdlog::error("Failed to allocate memory for pixels");
-        SelectObject(memDC, oldBitmap); // Restore old bitmap
-        DeleteObject(bitmap);           // Clean up bitmap
-        DeleteDC(memDC);                // Clean up memDC
-        ReleaseDC(NULL, screenDC);      // Clean up screenDC
+        SelectObject(memDC, oldBitmap);
+        DeleteObject(bitmap);
+        DeleteDC(memDC);
+        ReleaseDC(NULL, screenDC);
         return false;
     }
 
     // Get the bitmap bits
-    if (!GetDIBits(memDC, bitmap, 0, screenHeight, pixels, (BITMAPINFO *)&bi, DIB_RGB_COLORS))
+    if (!GetDIBits(memDC, bitmap, 0, monitorHeight, pixels, (BITMAPINFO *)&bi, DIB_RGB_COLORS))
     {
         spdlog::error("Failed to get DIBits");
-        delete[] pixels;                // Clean up pixels
-        SelectObject(memDC, oldBitmap); // Restore old bitmap
-        DeleteObject(bitmap);           // Clean up bitmap
-        DeleteDC(memDC);                // Clean up memDC
-        ReleaseDC(NULL, screenDC);      // Clean up screenDC
+        delete[] pixels;
+        SelectObject(memDC, oldBitmap);
+        DeleteObject(bitmap);
+        DeleteDC(memDC);
+        ReleaseDC(NULL, screenDC);
         return false;
     }
 
     // Create a buffer to hold the RGB data (stbi_write_png expects RGB format)
-    BYTE *rgbData = new (std::nothrow) BYTE[screenWidth * screenHeight * 3];
+    BYTE *rgbData = new (std::nothrow) BYTE[monitorWidth * monitorHeight * 3];
     if (!rgbData)
     {
         spdlog::error("Failed to allocate memory for rgbData");
-        delete[] pixels;                // Clean up pixels
-        SelectObject(memDC, oldBitmap); // Restore old bitmap
-        DeleteObject(bitmap);           // Clean up bitmap
-        DeleteDC(memDC);                // Clean up memDC
-        ReleaseDC(NULL, screenDC);      // Clean up screenDC
+        delete[] pixels;
+        SelectObject(memDC, oldBitmap);
+        DeleteObject(bitmap);
+        DeleteDC(memDC);
+        ReleaseDC(NULL, screenDC);
         return false;
     }
 
     // Convert BGR to RGB
-    for (int i = 0; i < screenWidth * screenHeight; ++i)
+    for (int i = 0; i < monitorWidth * monitorHeight; ++i)
     {
         rgbData[i * 3] = pixels[i * 3 + 2];     // Red
         rgbData[i * 3 + 1] = pixels[i * 3 + 1]; // Green
@@ -200,8 +232,8 @@ bool ScreenshotEventSource::captureScreenshot()
     // Use the serialization strategy to process the screenshot
     if (serializationStrategy)
     {
-        result =
-            serializationStrategy->serializeScreenshot(this, lockedSink.get(), rgbData, screenWidth, screenHeight, 3);
+        result = serializationStrategy->serializeScreenshot(this, outputSink.lock().get(), rgbData, monitorWidth,
+                                                            monitorHeight, 3);
     }
     else
     {

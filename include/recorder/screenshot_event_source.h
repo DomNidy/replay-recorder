@@ -38,7 +38,11 @@ class ScreenshotEventSource : public EventSource
     // Whether or not the screenshotThread is currently capturing screenshots
     std::atomic<bool> isRunning;
 
+    // Captures a screenshot of the focused monitorand serializes it
     bool captureScreenshot();
+
+    // Returns the monitor info of the focused monitor
+    std::optional<MONITORINFO> getFocusedMonitorInfo();
 
   private:
     friend class ScreenshotEventSourceBuilder;

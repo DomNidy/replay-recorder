@@ -52,7 +52,7 @@ void WindowChangeScreenshotTimingStrategy::onForegroundEvent(HWINEVENTHOOK hWinE
         {
             lastWindowChangeScreenshotTime = dwmsEventTime;
             // do a little delay before ss to ensure it captures the new window
-            std::this_thread::sleep_for(std::chrono::milliseconds(1250));
+            std::this_thread::sleep_for(std::chrono::milliseconds(3250));
             if (source.has_value())
             {
                 source.value()->captureScreenshot();
