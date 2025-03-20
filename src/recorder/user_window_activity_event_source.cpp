@@ -6,6 +6,7 @@
 
 #include "event_sink.h"
 #include "utils/timestamp_utils.h"
+#include "screenshot_serialization_strategy.h"
 
 UserWindowActivityEventSource::~UserWindowActivityEventSource()
 {
@@ -52,7 +53,7 @@ void UserWindowActivityEventSource::onForegroundEvent(HWINEVENTHOOK hWinEventHoo
             std::string timestampString = RP::Utils::formatTimestampToLLMReadable(std::localtime(&now));
 
             std::ostringstream oss;
-            oss << "\n[CHANGE WINDOW: \"" << windowTitle << "\", TIMESTAMP: " << timestampString << "]\n";
+            oss << "\n" << WINDOW_CHANGE_TOKEN << "\"" << windowTitle << "\" TIMESTAMP: " << timestampString << WINDOW_CHANGE_END_TOKEN << "\n";
             *outputSink.lock() << oss.str().data();
         }
     }

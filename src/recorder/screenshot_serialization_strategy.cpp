@@ -60,7 +60,7 @@ bool FilePathSerializationStrategy::serializeScreenshot(const ScreenshotEventSou
     std::wstring wFilePath(filePath.begin(), filePath.end());
 
     // Write the token and file path to the event sink
-    *sink << SCREENSHOT_PATH_TOKEN << wFilePath.c_str() << SCREENSHOT_END_TOKEN;
+    *sink << SCREENSHOT_PATH_TOKEN << "\"" << wFilePath.c_str() << "\"" << SCREENSHOT_END_TOKEN;
 
     return true;
 }
@@ -122,4 +122,4 @@ std::string FilePathSerializationStrategy::saveScreenshotToFile(std::filesystem:
 
     spdlog::info("Screenshot saved to: {}", outputFilepath);
     return outputFilepath;
-} 
+}

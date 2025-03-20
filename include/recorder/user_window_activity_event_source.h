@@ -7,6 +7,10 @@
 #include "event_source.h"
 #include "windows_hook_manager.h"
 
+// Tokens to identify window change events in the event stream
+constexpr const char *WINDOW_CHANGE_TOKEN = "[CHANGE_WINDOW]";
+constexpr const char *WINDOW_CHANGE_END_TOKEN = "[/CHANGE_WINDOW]";
+
 class UserWindowActivityEventSource : public EventSource, public WindowsForegroundHookListener
 {
 

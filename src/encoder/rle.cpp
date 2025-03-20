@@ -1,3 +1,4 @@
+#include <spdlog/spdlog.h>
 #include "encoder.h"
 
 inline std::string _rle_special_tokens(const std::string &userActivityString);
@@ -50,6 +51,8 @@ inline std::string _rle_special_tokens(const std::string &userActivityString)
                 break;
             }
             std::string tokenContent = userActivityString.substr(i + 1, j - (i + 1));
+
+            spdlog::debug("tokenContent: {}", tokenContent);
             if (tokenContent == prevToken)
             {
                 repeatCount++;

@@ -14,10 +14,9 @@ target_include_directories(recorder_lib
 target_link_libraries(
   recorder_lib
   PRIVATE project_options
-  PUBLIC spdlog::spdlog_header_only replay_utils)
+  PUBLIC replay_utils)
 
 # --- Create executable target for CLI functionality --- #
 add_executable(replay_recorder main.cpp)
 
-target_link_libraries(replay_recorder PRIVATE project_options recorder_lib
-                                              spdlog::spdlog_header_only)
+target_link_libraries(replay_recorder PRIVATE project_options recorder_lib)
