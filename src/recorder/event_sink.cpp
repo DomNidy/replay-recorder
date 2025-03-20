@@ -30,6 +30,17 @@ void EventSink::addSource(std::shared_ptr<EventSource> source)
     sources.push_back(source);
 }
 
+const std::vector<std::weak_ptr<EventSource>> EventSink::getSources() const
+{
+    std::vector<std::weak_ptr<EventSource>> weakSources;
+    for (const auto &src : sources)
+    {
+        weakSources.push_back(src);
+    }
+
+    return weakSources;
+}
+
 EventSink &EventSink::operator<<(const char *data)
 {
     // Get buffer size needed to perform the conversion

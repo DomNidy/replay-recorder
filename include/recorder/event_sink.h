@@ -33,6 +33,8 @@ class EventSink : public std::enable_shared_from_this<EventSink>
     // Add a source to receive events from (e.g., user input events)
     void addSource(std::shared_ptr<EventSource> source);
 
+    const std::vector<std::weak_ptr<EventSource>> getSources() const;
+
     // Cleans up all the event sources
     void uninitializeSink();
 
