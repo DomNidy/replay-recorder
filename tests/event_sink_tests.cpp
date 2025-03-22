@@ -4,10 +4,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <memory>
-#include <spdlog/spdlog.h>
 #include <string>
 #include "recorder/event_sink.h"
 #include "recorder/event_source.h"
+#include "utils/logging.h"
 
 class EventSinkTest : public ::testing::Test
 {
@@ -17,7 +17,7 @@ class EventSinkTest : public ::testing::Test
         // Create a temporary test file path
         testFilePath = "test_event_sink.txt";
 
-        spdlog::info("Setting up test file path: {}", testFilePath);
+        LOG_INFO("Setting up test file path: {}", testFilePath);
         // Delete the file if it exists from previous test runs
         if (std::filesystem::exists(testFilePath))
         {
@@ -27,7 +27,7 @@ class EventSinkTest : public ::testing::Test
 
     void TearDown() override
     {
-        spdlog::info("Test replay file is located at: {}", testFilePath);
+        LOG_INFO("Test replay file is located at: {}", testFilePath);
     }
 
     std::string testFilePath;

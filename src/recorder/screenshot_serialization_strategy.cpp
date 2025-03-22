@@ -1,12 +1,13 @@
 #define STBIW_WINDOWS_UTF8
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <thirdparty/stb_image_write.h>
-
+#include "screenshot_serialization_strategy.h"
 #include <algorithm>
 #include <string>
+#include <thirdparty/stb_image_write.h>
 #include <vector>
 #include "screenshot_event_source.h"
-#include "screenshot_serialization_strategy.h"
+#include "utils/logging.h"
+
 
 // Base64 encoding table
 static const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -44,7 +45,7 @@ bool FilePathSerializationStrategy::serializeScreenshot(const ScreenshotEventSou
 {
     if (!sink || !source)
     {
-        spdlog::error("Null sink or source in FilePathSerializationStrategy");
+        LOG_CLASS_ERROR("FilePathSerializationStrategy", "Null sink or source in FilePathSerializationStrategy");
         return false;
     }
 
@@ -52,7 +53,7 @@ bool FilePathSerializationStrategy::serializeScreenshot(const ScreenshotEventSou
     std::string filePath = saveScreenshotToFile(outputDirectory, imageData, width, height, channels);
     if (filePath.empty())
     {
-        spdlog::error("Failed to save screenshot to file");
+        LOG_CLASS_ERROR("FilePathSerializationStrategy", "Failed to save screenshot to file");
         return false;
     }
 
@@ -71,7 +72,7 @@ bool Base64SerializationStrategy::serializeScreenshot(const ScreenshotEventSourc
 {
     if (!sink || !imageData)
     {
-        spdlog::error("Null sink or image data in Base64SerializationStrategy");
+        LOG_CLASS_ERROR("Base64SerializationStrategy", "Null sink or image data in Base64SerializationStrategy");
         return false;
     }
 
@@ -94,7 +95,7 @@ std::string FilePathSerializationStrategy::saveScreenshotToFile(std::filesystem:
 {
     if (!imageData)
     {
-        spdlog::error("Null image data in saveScreenshotToFile");
+        LOG_CLASS_ERROR("FilePathSerializationStrategy", "Null image data in saveScreenshotToFile");
         return "";
     }
 
@@ -116,10 +117,10 @@ std::string FilePathSerializationStrategy::saveScreenshotToFile(std::filesystem:
 
     if (result == 0)
     {
-        spdlog::error("Failed to write PNG file to {}", outputFilepath);
+        LOG_CLASS_ERROR("FilePathSerializationStrategy", "Failed to write PNG file to {}", outputFilepath);
         return "";
     }
 
-    spdlog::info("Screenshot saved to: {}", outputFilepath);
+    LOG_CLASS_INFO("FilePathSerializationStrategy", "Screenshot saved to: {}", outputFilepath);
     return outputFilepath;
 }

@@ -2,11 +2,12 @@
 #include <windows.h>
 #include <filesystem>
 #include <memory>
-#include <spdlog/spdlog.h>
+
 #include <sstream>
 #include <string>
 
 #include "event_sink.h"
+#include "utils/logging.h"
 
 // Forward declarations
 class ScreenshotEventSource;
@@ -49,7 +50,7 @@ class FilePathSerializationStrategy : public ScreenshotSerializationStrategy
 
     ~FilePathSerializationStrategy()
     {
-        spdlog::debug("FilePathSerializationStrategy::~FilePathSerializationStrategy: Destructor called");
+        LOG_CLASS_DEBUG("FilePathSerializationStrategy", "Destructor called");
     }
 
     virtual bool serializeScreenshot(const ScreenshotEventSource *source, EventSink *sink, const BYTE *imageData,

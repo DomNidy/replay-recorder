@@ -3,22 +3,25 @@
 #include <string>
 #include <vector>
 #include "screenshot_event_source.h"
+#include "utils/logging.h"
 
 bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotEventSource *source)
 {
-    spdlog::info("Screenshot timing strategy: Fixed interval");
+    LOG_CLASS_INFO("FixedIntervalScreenshotTimingStrategy", "Screenshot timing strategy: Fixed interval");
     while (source && source->getIsRunning())
     {
 
         if (!isIdle(pauseAfterIdleSeconds))
         {
-            spdlog::info("Capturing screenshot");
+            LOG_CLASS_INFO("FixedIntervalScreenshotTimingStrategy", "Capturing screenshot");
             source->captureScreenshot();
         }
         else
         {
             uint32_t timeSinceLastInput = getCurrentTime() - getLastInputTime();
-            spdlog::info("Skipping screenshot because no input was detected for {} seconds", timeSinceLastInput / 1000);
+            LOG_CLASS_INFO("FixedIntervalScreenshotTimingStrategy",
+                           "Skipping screenshot because no input was detected for {} seconds",
+                           timeSinceLastInput / 1000);
         }
 
         std::this_thread::sleep_for(std::chrono::seconds(intervalSeconds));
@@ -28,11 +31,12 @@ bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotE
 
 bool WindowChangeScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotEventSource *source)
 {
-    spdlog::debug("Screenshot timing strategy: Window change, trying to register hook...");
+    LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy",
+                    "Screenshot timing strategy: Window change, trying to register hook...");
 
     WindowsHookManager::getInstance().registerForegroundHookListener(shared_from_this());
 
-    spdlog::debug("WindowChangeScreenshotTimingStrategy: Hook installed successfully");
+    LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy", "Hook installed successfully");
 
     return true;
 }
@@ -41,30 +45,39 @@ void WindowChangeScreenshotTimingStrategy::onForegroundEvent(HWINEVENTHOOK hWinE
                                                              LONG idObject, LONG idChild, DWORD dwEventThread,
                                                              DWORD dwmsEventTime)
 {
-    spdlog::debug("--- WindowChangeScreenshotTimingStrategy: onForegroundEvent called with event: {} ----", event);
+    LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy", "Entered window change strategy");
 
     if (source.has_value())
     {
-        spdlog::debug("WindowChangeScreenshotTimingStrategy: onForegroundEvent called thread id: {}",
-                      GetCurrentThreadId());
-        uint32_t timeSinceLastWindowChange = dwmsEventTime - lastWindowChangeScreenshotTime;
-        if (timeSinceLastWindowChange >= windowChangeDebounceSeconds * 1000)
+        // Check if we should debounce the screenshot
+        auto timeSinceLastWindowChange = std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::time_point<std::chrono::steady_clock>(std::chrono::milliseconds(dwmsEventTime)) -
+            lastWindowChangeScreenshotTime);
+
+        if (timeSinceLastWindowChange < windowChangeDebounceSeconds)
         {
-            lastWindowChangeScreenshotTime = dwmsEventTime;
-            // do a little delay before ss to ensure it captures the new window
-            std::this_thread::sleep_for(std::chrono::milliseconds(3250));
-            if (source.has_value())
-            {
-                source.value()->captureScreenshot();
-            }
+            LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy",
+                            "Debouncing screenshot because it was taken too recently ({}s < {}s)",
+                            timeSinceLastWindowChange.count(), windowChangeDebounceSeconds.count());
+            return;
+        }
+
+        // Update the last window change screenshot time to now
+        lastWindowChangeScreenshotTime = std::chrono::steady_clock::now();
+
+        // do a little delay before ss to ensure it captures the new window
+        std::this_thread::sleep_for(windowChangeScreenshotDelaySeconds);
+        if (source.has_value())
+        {
+            source.value()->captureScreenshot();
         }
     }
-    spdlog::debug("--- WindowChangeScreenshotTimingStrategy: onForegroundEvent finished ----");
+    LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy", "onForegroundEvent finished");
 }
 
 WindowChangeScreenshotTimingStrategy::~WindowChangeScreenshotTimingStrategy()
 {
-    spdlog::debug("WindowChangeScreenshotTimingStrategy: Destructor called, trying to unregister hook...");
+    LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy", "Destructor called, trying to unregister hook...");
 }
 
 uint32_t ScreenshotTimingStrategy::getLastInputTime() const

@@ -5,9 +5,9 @@
 #include <memory>
 #include "event_sink.h"
 #include "screenshot_event_source.h"
-#include "spdlog/spdlog.h"
 #include "user_input_event_source.h"
 #include "user_window_activity_event_source.h"
+#include "utils/logging.h"
 #include "windows_hook_manager.h"
 namespace
 {
@@ -18,7 +18,7 @@ void signalHandler(int signal)
 {
     if (signal == SIGINT)
     {
-        spdlog::info("--- Gracefully shutting down in thread {} ---", GetCurrentThreadId());
+        LOG_INFO("--- Gracefully shutting down in thread {} ---", GetCurrentThreadId());
 
         if (g_eventSink)
         {
@@ -31,7 +31,7 @@ void signalHandler(int signal)
 
 int main(int argc, char **argv)
 {
-    spdlog::set_level(spdlog::level::debug);
+    RP::Logging::initLogging(spdlog::level::debug);
     std::signal(SIGINT, signalHandler);
 
     // Initialize the windows hook manager (should be done before creating any event sources and in the main thread)
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
     // Initialize event sink
     g_eventSink = std::make_shared<EventSink>("out.txt");
 
-    spdlog::debug("Main thread id: {}", GetCurrentThreadId());
+    LOG_DEBUG("Main thread id: {}", GetCurrentThreadId());
 
     // Create EventSources to monitor user activity
     auto inputEventSource = std::make_unique<UserInputEventSource>();
@@ -48,7 +48,8 @@ int main(int argc, char **argv)
     auto screenshotEventSource =
         ScreenshotEventSourceBuilder()
             .withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType::FilePath)
-            .withScreenshotTimingStrategy(std::make_shared<WindowChangeScreenshotTimingStrategy>(60, 60, 5))
+            .withScreenshotTimingStrategy(std::make_shared<WindowChangeScreenshotTimingStrategy>(
+                std::chrono::seconds(60), std::chrono::seconds(60), std::chrono::seconds(5), std::chrono::seconds(2)))
             .withScreenshotOutputDirectory(std::filesystem::path("./replay-screenshots"))
             .build();
 

@@ -1,12 +1,13 @@
 #include "recorder/event_sink.h"
-#include <spdlog/spdlog.h>
+
+#include "utils/logging.h"
 
 #include <iostream>
 
 EventSink::EventSink(const std::string &name)
 {
     file.open(name, std::ios::out | std::ios::app | std::ios::binary);
-    spdlog::info("Max recording buffer size: {}", MAX_RECORDING_BUFFER_SIZE);
+    LOG_CLASS_INFO("EventSink", "Max recording buffer size: {}", MAX_RECORDING_BUFFER_SIZE);
     if (!file.is_open())
     {
         throw std::runtime_error("Failed to open output file for EventSink - " + name + ", " + std::strerror(errno));
@@ -17,7 +18,7 @@ EventSink::~EventSink()
 {
     if (file.is_open())
     {
-        _flushData();
+        flushData();
         file.close();
     }
 }
@@ -25,7 +26,7 @@ EventSink::~EventSink()
 void EventSink::addSource(std::shared_ptr<EventSource> source)
 {
     // Initialize the source with a pointer to this EventSink
-    spdlog::debug("-- EventSink: Adding a source... --");
+    LOG_CLASS_DEBUG("EventSink", "Adding a source...");
     source->initializeSource(shared_from_this());
     sources.push_back(source);
 }
@@ -47,7 +48,8 @@ EventSink &EventSink::operator<<(const char *data)
     int len = MultiByteToWideChar(CP_UTF8, 0, data, -1, nullptr, 0);
     if (len == 0)
     {
-        spdlog::error("Failed to calculate buffer size for UTF-8 to UTF-16 conversion: {}", GetLastError());
+        LOG_CLASS_ERROR("EventSink", "Failed to calculate buffer size for UTF-8 to UTF-16 conversion: {}",
+                        GetLastError());
         return *this;
     }
 
@@ -57,12 +59,12 @@ EventSink &EventSink::operator<<(const char *data)
         len); // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
     if (convertResult == 0)
     {
-        spdlog::error("UTF-8 to UTF-16 conversion failed: {}", GetLastError());
+        LOG_CLASS_ERROR("EventSink", "UTF-8 to UTF-16 conversion failed: {}", GetLastError());
         return *this;
     }
 
     recordingBuffer.insert(recordingBuffer.end(), output.get(), output.get() + len - 1);
-    _flushIfMaxSizeExceeded();
+    flushIfMaxSizeExceeded();
     return *this;
 }
 
@@ -71,24 +73,24 @@ EventSink &EventSink::operator<<(const wchar_t *data)
     size_t len = wcslen(data);
 
     recordingBuffer.insert(recordingBuffer.end(), data, (data + len));
-    _flushIfMaxSizeExceeded();
+    flushIfMaxSizeExceeded();
     return *this;
 }
 
 void EventSink::uninitializeSink()
 {
-    spdlog::debug("Uninitializing EventSink in thread {}", GetCurrentThreadId());
+    LOG_CLASS_DEBUG("EventSink", "Uninitializing in thread {}", GetCurrentThreadId());
     for (auto &source : sources)
     {
         source->uninitializeSource();
     }
 }
 
-inline void EventSink::_flushData()
+inline void EventSink::flushData()
 {
     if (!recordingBuffer.empty())
     {
-        spdlog::info("Flushing {} bytes from recording buffer", recordingBuffer.size());
+        LOG_CLASS_INFO("EventSink", "Flushing {} bytes from recording buffer", recordingBuffer.size());
 
         // Convert recording buffer's wchar_t array to an std::string so we can
         // save to UTF-8
@@ -102,7 +104,7 @@ inline void EventSink::_flushData()
         }
         catch (const std::range_error &e)
         {
-            spdlog::error("Error converting UTF-16 to UTF-8: {}", e.what());
+            LOG_CLASS_ERROR("EventSink", "Error converting UTF-16 to UTF-8: {}", e.what());
         }
 
         file.flush();
@@ -110,10 +112,10 @@ inline void EventSink::_flushData()
     }
 }
 
-inline void EventSink::_flushIfMaxSizeExceeded()
+inline void EventSink::flushIfMaxSizeExceeded()
 {
     if (recordingBuffer.size() >= MAX_RECORDING_BUFFER_SIZE)
     {
-        _flushData();
+        flushData();
     }
 }

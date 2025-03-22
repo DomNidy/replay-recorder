@@ -44,11 +44,11 @@ class EventSink : public std::enable_shared_from_this<EventSink>
     // me...
     std::vector<std::shared_ptr<EventSource>> sources;
 
-    // Checks buffer size and calls _flushData() it if its too big
-    inline void _flushIfMaxSizeExceeded();
+    // Checks buffer size and calls flushData() it if its too big
+    inline void flushIfMaxSizeExceeded();
 
     // Flush all buffered data to file/output stream
-    inline void _flushData();
+    inline void flushData();
 
     // Vector of buffered data
     std::vector<wchar_t> recordingBuffer;

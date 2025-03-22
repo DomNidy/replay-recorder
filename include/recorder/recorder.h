@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-/// @brief 
+/// @brief
 namespace RP::Recorder
 {
 

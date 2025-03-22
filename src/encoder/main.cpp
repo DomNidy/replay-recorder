@@ -6,9 +6,13 @@
 #include <stdexcept>
 
 #include "encoder/encoder.h"
+#include "utils/logging.h"
 
 int main(int argc, char *argv[])
 {
+    // Initialize logging
+    RP::Logging::initLogging(spdlog::level::info);
+
     // Validate command-line arguments.
     if (argc < 2 || argc > 3)
     {
@@ -37,7 +41,7 @@ int main(int argc, char *argv[])
     std::ifstream inputFile(inputFilename);
     if (!inputFile.is_open())
     {
-        std::cerr << "Error opening input file: " << inputFilename << "\n";
+        LOG_ERROR("Error opening input file: {}", inputFilename);
         return 1;
     }
     std::stringstream buffer;
@@ -55,21 +59,21 @@ int main(int argc, char *argv[])
             ? 0.0
             : (static_cast<int>(encodedLength - originalLength) / static_cast<double>(originalLength)) * 100.0;
 
-    std::cout << "Original length: " << originalLength << "\n";
-    std::cout << "Encoded length: " << encodedLength << "\n";
-    std::cout << "Percent change: " << std::fixed << std::setprecision(2) << percentChange << "%\n";
+    LOG_INFO("Original length: {}", originalLength);
+    LOG_INFO("Encoded length: {}", encodedLength);
+    LOG_INFO("Percent change: {:.2f}%", percentChange);
 
     // Write encoded content to output file
     std::ofstream outputFile(outputFilename);
     if (!outputFile.is_open())
     {
-        std::cerr << "Error opening output file: " << outputFilename << "\n";
+        LOG_ERROR("Error opening output file: {}", outputFilename.stem().generic_string());
         return 1;
     }
     outputFile << encodedContent;
     outputFile.close();
 
-    std::cout << "Encoded content written to: " << outputFilename << "\n";
+    LOG_INFO("Encoded content written to: {}", outputFilename.stem().generic_string());
 
     return 0;
 }

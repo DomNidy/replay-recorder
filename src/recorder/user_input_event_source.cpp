@@ -1,10 +1,11 @@
 #include "user_input_event_source.h"
 
 #include <cassert>
-#include <spdlog/spdlog.h>
+
 #include <string>
 
 #include "event_sink.h"
+#include "utils/logging.h"
 
 // Maps HHOOKs to the corresponding UserInputEventSource
 HHOOK UserInputEventSource::hKeyboardHook = NULL;
@@ -17,7 +18,7 @@ bool tabPressed = false;
 
 UserInputEventSource::~UserInputEventSource()
 {
-    spdlog::debug("UserInputEventSource::~UserInputEventSource: Destructor called in thread {}", GetCurrentThreadId());
+    LOG_CLASS_DEBUG("UserInputEventSource", "Destructor called in thread {}", GetCurrentThreadId());
 }
 
 void UserInputEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
@@ -49,23 +50,24 @@ void UserInputEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
     }
     currentInstance = this;
 
-    spdlog::info("UserInputEventSource successfully installed keyboard hook");
+    LOG_CLASS_INFO("UserInputEventSource", "Successfully installed keyboard hook");
 }
 
 void UserInputEventSource::uninitializeSource()
 {
-    spdlog::debug("Uninitializing UserInputEventSource in thread {}", GetCurrentThreadId());
+    LOG_CLASS_DEBUG("UserInputEventSource", "Uninitializing in thread {}", GetCurrentThreadId());
     if (hKeyboardHook == NULL)
     {
-        spdlog::warn("UserInputEventSource::uninitializeSource: Keyboard hook was already unhooked, this is expected "
-                     "because the EventSink uninitializes all sources when it is uninitialized. But this design is "
-                     "scuffed, warning so I remember to fix it later.");
+        LOG_CLASS_WARN("UserInputEventSource",
+                       "Keyboard hook was already unhooked, this is expected "
+                       "because the EventSink uninitializes all sources when it is uninitialized. But this design is "
+                       "scuffed, warning so I remember to fix it later.");
     }
 
     UnhookWindowsHookEx(hKeyboardHook);
     hKeyboardHook = NULL;
     currentInstance = nullptr;
-    spdlog::info("UserInputEventSource successfully uninstalled keyboard hook");
+    LOG_CLASS_INFO("UserInputEventSource", "Successfully uninstalled keyboard hook");
 }
 
 bool handleSpecialKey(int vkCode, EventSink *outputSink)
