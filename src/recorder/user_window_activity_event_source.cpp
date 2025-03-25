@@ -17,7 +17,8 @@ void UserWindowActivityEventSource::uninitializeSource()
 {
     LOG_CLASS_DEBUG("UserWindowActivityEventSource", "Uninitializing in thread id: {}", GetCurrentThreadId());
 
-    WindowsHookManager::getInstance().unregisterForegroundHookListener(shared_from_this());
+    Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::FocusObserver>(
+        shared_from_this());
 
     LOG_CLASS_INFO("UserWindowActivityEventSource", "Successfully unregistered from WindowsHookManager");
 }
@@ -33,18 +34,17 @@ void UserWindowActivityEventSource::initializeSource(std::weak_ptr<EventSink> in
     LOG_CLASS_DEBUG("UserWindowActivityEventSource", "initializeSource called");
 
     // Add windows hook
-    WindowsHookManager::getInstance().registerForegroundHookListener(shared_from_this());
+    Replay::Windows::WindowsHookManager::getInstance().registerObserver<Replay::Windows::FocusObserver>(
+        shared_from_this());
     LOG_CLASS_DEBUG("UserWindowActivityEventSource", "Successfully installed window event hook");
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wineventproc
-void UserWindowActivityEventSource::onForegroundEvent(HWINEVENTHOOK hWinEventHook, DWORD event, HWND hWnd,
-                                                      LONG idObject, LONG idChild, DWORD dwEventThread,
-                                                      DWORD dwmsEventTime)
+void UserWindowActivityEventSource::onFocusChange(HWND hwnd)
 {
     std::string windowTitle;
-    LOG_CLASS_DEBUG("UserWindowActivityEventSource", "onForegroundEvent called with event: {}", event);
-    if (event == EVENT_SYSTEM_FOREGROUND && getWindowTitle(hWnd, windowTitle))
+    LOG_CLASS_DEBUG("UserWindowActivityEventSource", "onFocusChange called with hwnd: {}", reinterpret_cast<void*>(hwnd));
+    if (getWindowTitle(hwnd, windowTitle))
     {
         // Special separator token, produced when focus enters and exits a window
         if (windowTitle != "Task Switching")
@@ -61,7 +61,7 @@ void UserWindowActivityEventSource::onForegroundEvent(HWINEVENTHOOK hWinEventHoo
     }
 }
 
-bool UserWindowActivityEventSource::getWindowTitle(HWND hWindow, std::string &destStr)
+bool UserWindowActivityEventSource::getWindowTitle(HWND hWindow, std::string& destStr)
 {
     char processName[MAX_PATH] = "";
     if (GetWindowTextA(hWindow, processName, MAX_PATH) == 0)

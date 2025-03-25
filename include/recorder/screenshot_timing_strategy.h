@@ -25,7 +25,7 @@ class ScreenshotTimingStrategy
     virtual ~ScreenshotTimingStrategy() = default;
     ScreenshotTimingStrategy() = default;
 
-    virtual bool screenshotThreadFunction(ScreenshotEventSource *source) = 0;
+    virtual bool screenshotThreadFunction(ScreenshotEventSource* source) = 0;
 
   protected:
     // Get the time of the last input event
@@ -59,7 +59,9 @@ class ScreenshotTimingStrategy
 // t=7s:  Window change → No screenshot (only 1s since last window change screenshot)
 // t=10s: Fixed interval → Screenshot taken (continues on schedule)
 // t=11s: Window change → Screenshot taken (>5s since last window change screenshot)
-class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy, public WindowsForegroundHookListener
+class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy,
+                                             public Replay::Windows::FocusObserver,
+                                             public std::enable_shared_from_this<WindowChangeScreenshotTimingStrategy>
 {
     friend class ScreenshotEventSourceBuilder; // needs to update source ptr
   public:
@@ -68,7 +70,8 @@ class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy, pu
         std::chrono::seconds pauseAfterIdleSeconds = std::chrono::seconds(60),
         std::chrono::seconds windowChangeDebounceSeconds = std::chrono::seconds(5),
         std::chrono::seconds windowChangeScreenshotDelaySeconds = std::chrono::seconds(2))
-        : intervalSeconds(intervalSeconds), pauseAfterIdleSeconds(pauseAfterIdleSeconds),
+        : intervalSeconds(intervalSeconds),
+          pauseAfterIdleSeconds(pauseAfterIdleSeconds),
           windowChangeDebounceSeconds(windowChangeDebounceSeconds),
           windowChangeScreenshotDelaySeconds(windowChangeScreenshotDelaySeconds)
     {
@@ -76,12 +79,12 @@ class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy, pu
 
     virtual ~WindowChangeScreenshotTimingStrategy();
 
-    virtual bool screenshotThreadFunction(ScreenshotEventSource *source) override;
+    virtual bool screenshotThreadFunction(ScreenshotEventSource* source) override;
 
   private:
     // Pointer to the source that is capturing screenshots
     // Raw ptr, so be careful to check before using
-    std::optional<ScreenshotEventSource *> source;
+    std::optional<ScreenshotEventSource*> source;
 
   private:
     // Time between interval screenshots (for the fixed interval backup strategy)
@@ -102,8 +105,7 @@ class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy, pu
     std::chrono::time_point<std::chrono::steady_clock> lastWindowChangeScreenshotTime;
 
     // Windows event hook callback that processes window focus change events
-    void onForegroundEvent(HWINEVENTHOOK hWinEventHook, DWORD event, HWND hWnd, LONG idObject, LONG idChild,
-                           DWORD dwEventThread, DWORD dwmsEventTime) override;
+    void onFocusChange(HWND hwnd) override;
 };
 
 // Take a screenshot every N seconds with a configurable idle timeout
@@ -115,7 +117,7 @@ class FixedIntervalScreenshotTimingStrategy : public ScreenshotTimingStrategy
     {
     }
 
-    virtual bool screenshotThreadFunction(ScreenshotEventSource *source) override;
+    virtual bool screenshotThreadFunction(ScreenshotEventSource* source) override;
 
   private:
     // Number of seconds between screenshots

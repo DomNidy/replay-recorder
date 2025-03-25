@@ -29,13 +29,13 @@ void signalHandler(int signal)
     }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     RP::Logging::initLogging(spdlog::level::debug);
     std::signal(SIGINT, signalHandler);
 
     // Initialize the windows hook manager (should be done before creating any event sources and in the main thread)
-    WindowsHookManager::getInstance();
+    Replay::Windows::WindowsHookManager::getInstance();
 
     // Initialize event sink
     g_eventSink = std::make_shared<EventSink>("out.txt");

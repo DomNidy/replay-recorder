@@ -5,7 +5,7 @@
 #include "screenshot_event_source.h"
 #include "utils/logging.h"
 
-bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotEventSource *source)
+bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotEventSource* source)
 {
     LOG_CLASS_INFO("FixedIntervalScreenshotTimingStrategy", "Screenshot timing strategy: Fixed interval");
     while (source && source->getIsRunning())
@@ -29,21 +29,20 @@ bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotE
     return true;
 }
 
-bool WindowChangeScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotEventSource *source)
+bool WindowChangeScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotEventSource* source)
 {
     LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy",
                     "Screenshot timing strategy: Window change, trying to register hook...");
 
-    WindowsHookManager::getInstance().registerForegroundHookListener(shared_from_this());
+    Replay::Windows::WindowsHookManager::getInstance().registerObserver<Replay::Windows::FocusObserver>(
+        shared_from_this());
 
     LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy", "Hook installed successfully");
 
     return true;
 }
 
-void WindowChangeScreenshotTimingStrategy::onForegroundEvent(HWINEVENTHOOK hWinEventHook, DWORD event, HWND hWnd,
-                                                             LONG idObject, LONG idChild, DWORD dwEventThread,
-                                                             DWORD dwmsEventTime)
+void WindowChangeScreenshotTimingStrategy::onFocusChange(HWND hwnd)
 {
     LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy", "Entered window change strategy");
 
@@ -51,7 +50,7 @@ void WindowChangeScreenshotTimingStrategy::onForegroundEvent(HWINEVENTHOOK hWinE
     {
         // Check if we should debounce the screenshot
         auto timeSinceLastWindowChange = std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::time_point<std::chrono::steady_clock>(std::chrono::milliseconds(dwmsEventTime)) -
+            std::chrono::time_point<std::chrono::steady_clock>(std::chrono::milliseconds(getCurrentTime())) -
             lastWindowChangeScreenshotTime);
 
         if (timeSinceLastWindowChange < windowChangeDebounceSeconds)
