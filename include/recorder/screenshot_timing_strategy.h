@@ -39,11 +39,11 @@ class ScreenshotTimingStrategy
 // 1. Window Change Detection: Takes screenshots when the user switches between windows
 //    - Implements debouncing to prevent excessive screenshots during rapid window switching
 //    - A configurable `windowChangeScreenshotDelaySeconds` to delay the screenshot after a window change (otherwise it
-//    may not capture the new window)
-//    -
+//      may not capture the new window)
 //    - Only triggers on actual window focus changes, not other window events
 //
-// 2. Fixed Interval Backup: Additionally takes screenshots at regular intervals
+// 2. Fixed Interval Backup: When no window changes are detected for a period of time, switches to taking screenshots at
+//    fixed intervals
 //    - Ensures activity is captured even when the user stays in one window for extended periods
 //    - Interval screenshots continue regardless of window change debouncing
 //
@@ -53,7 +53,7 @@ class ScreenshotTimingStrategy
 // Debouncing Behavior Example:
 // With windowChangeDebounceSeconds=5, intervalSeconds=5, windowChangeScreenshotDelaySeconds=2:
 // t=0s:  Window change → Schedule a screenshot to be taken 2 seconds from now (windowChangeScreenshotDelaySeconds)
-// t=2s:  Fixed interval → Screenshot taken
+// t=2s:  ...           → Screenshot taken
 // t=5s:  Fixed interval → Screenshot taken
 // t=6s:  Window change → Screenshot taken (>5s since last window change screenshot)
 // t=7s:  Window change → No screenshot (only 1s since last window change screenshot)
@@ -82,6 +82,11 @@ class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy,
     virtual bool screenshotThreadFunction(ScreenshotEventSource* source) override;
 
   private:
+    //~ Begin Replay::Windows::FocusObserver interface
+    void onFocusChange(HWND hwnd) override;
+    //~ End Replay::Windows::FocusObserver interface
+
+  private:
     // Pointer to the source that is capturing screenshots
     // Raw ptr, so be careful to check before using
     std::optional<ScreenshotEventSource*> source;
@@ -103,9 +108,6 @@ class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy,
   private:
     // Time of last window change that triggered a screenshot
     std::chrono::time_point<std::chrono::steady_clock> lastWindowChangeScreenshotTime;
-
-    // Windows event hook callback that processes window focus change events
-    void onFocusChange(HWND hwnd) override;
 };
 
 // Take a screenshot every N seconds with a configurable idle timeout

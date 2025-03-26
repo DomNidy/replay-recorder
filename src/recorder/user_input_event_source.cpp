@@ -65,7 +65,6 @@ bool handleSpecialKey(int vkCode, EventSink* outputSink)
 void UserInputEventSource::onKeyboardInput(Replay::Windows::KeyboardInputEventData eventData)
 {
     auto lockedSink = outputSink.lock();
-
     assert(lockedSink != nullptr &&
            "UserInputEventSource::onKeyboardInput ran, but outputSink was nullptr. This should "
            "never happen, as the outputSink should be set to a valid EventSink when the hook is installed.");

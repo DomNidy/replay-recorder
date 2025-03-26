@@ -16,6 +16,27 @@
 #define RP_ERR_FAILED_TO_CREATE_SCREENSHOT_OUTPUT_DIRECTORY "Failed to create screenshot output directory"
 #define RP_ERR_INVALID_SCREENSHOT_SERIALIZATION_STRATEGY "Invalid screenshot serialization strategy"
 
+// ScreenshotEventSource captures screenshots of the user's focused monitor
+// and sends them to an EventSink.
+//
+// Key characteristics:
+// - Uses Windows API to capture the contents of the focused monitor
+// - Follows the Strategy pattern for flexible configuration:
+//   1. ScreenshotTimingStrategy: Controls when to take screenshots (on window changes or at fixed intervals)
+//   2. ScreenshotSerializationStrategy: Controls how to serialize screenshots (as file paths or base64 data)
+// - Runs in a dedicated background thread to avoid blocking the main application
+// - Includes idle detection to avoid taking screenshots when the user is inactive
+// - Can be configured via the ScreenshotEventSourceBuilder class
+//
+// Usage:
+// The class is intended to be created using the ScreenshotEventSourceBuilder, which
+// provides a fluent interface for configuration. Example:
+//
+// auto builder = ScreenshotEventSourceBuilder()
+//     .withScreenshotOutputDirectory("./screenshots")
+//     .withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType::FilePath)
+//     .withScreenshotTimingStrategy(std::make_shared<WindowChangeScreenshotTimingStrategy>());
+// auto source = builder.build();
 class ScreenshotEventSource : public EventSource
 {
     // These classes need access to the captureScreenshot method
@@ -26,21 +47,29 @@ class ScreenshotEventSource : public EventSource
     ScreenshotEventSource();
     ~ScreenshotEventSource();
 
+    // Returns whether the screenshot thread is currently running
     bool getIsRunning() const;
 
   private:
+    // Initializes the event source with the provided sink and starts the screenshot thread
+    // Throws std::runtime_error if the sink is nullptr or expired
     virtual void initializeSource(std::weak_ptr<EventSink> inSink) override;
+
+    // Stops the screenshot thread and performs cleanup
     virtual void uninitializeSource() override;
 
+    // Reference to the event sink where screenshots will be sent
     std::weak_ptr<EventSink> outputSink;
 
     // Whether or not the screenshotThread is currently capturing screenshots
     std::atomic<bool> isRunning;
 
-    // Captures a screenshot of the focused monitorand serializes it
+    // Captures a screenshot of the focused monitor and serializes it
+    // using the configured serialization strategy
     bool captureScreenshot();
 
     // Returns the monitor info of the focused monitor
+    // Returns std::nullopt if no monitor could be identified
     std::optional<MONITORINFO> getFocusedMonitorInfo();
 
   private:
@@ -56,16 +85,42 @@ class ScreenshotEventSource : public EventSource
     std::shared_ptr<ScreenshotTimingStrategy> timingStrategy;
 };
 
+// ScreenshotEventSourceBuilder provides a fluent interface for creating properly configured
+// ScreenshotEventSource instances. It follows the Builder pattern to simplify the creation of
+// ScreenshotEventSource objects.
+//
+// The builder handles:
+// - Setting up the screenshot output directory (creating it if necessary)
+// - Configuring the serialization strategy (file path or base64)
+// - Configuring the timing strategy (window change or fixed interval)
+// - Validating the configuration before building
+//
+// Example usage:
+//   auto builder = ScreenshotEventSourceBuilder()
+//       .withScreenshotOutputDirectory("./screenshots")
+//       .withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType::FilePath)
+//       .withScreenshotTimingStrategy(std::make_shared<WindowChangeScreenshotTimingStrategy>());
+//   auto source = builder.build();
 class ScreenshotEventSourceBuilder
 {
   public:
     ScreenshotEventSourceBuilder();
     ~ScreenshotEventSourceBuilder() = default;
 
-    ScreenshotEventSourceBuilder &withScreenshotOutputDirectory(std::filesystem::path screenshotOutputDirectory);
-    ScreenshotEventSourceBuilder &withScreenshotSerializationStrategy(
+    // Sets the directory where screenshots will be saved when using FilePath serialization strategy
+    // The directory will be created if it doesn't exist during build()
+    ScreenshotEventSourceBuilder& withScreenshotOutputDirectory(std::filesystem::path screenshotOutputDirectory);
+
+    // Sets the strategy type for serializing screenshots:
+    // - FilePath: Save screenshots to files. File paths are sent to the event sink
+    // - Base64: Encode screenshots as base64. Base64 data is sent to the event sink
+    ScreenshotEventSourceBuilder& withScreenshotSerializationStrategy(
         ScreenshotSerializationStrategyType serializationStrategyType);
-    ScreenshotEventSourceBuilder &withScreenshotTimingStrategy(
+
+    // Sets the strategy for determining when to capture screenshots:
+    // - WindowChangeScreenshotTimingStrategy: Take screenshots when window focus changes
+    // - FixedIntervalScreenshotTimingStrategy: Take screenshots at fixed time intervals
+    ScreenshotEventSourceBuilder& withScreenshotTimingStrategy(
         std::shared_ptr<ScreenshotTimingStrategy> timingStrategy);
     std::unique_ptr<ScreenshotEventSource> build();
 

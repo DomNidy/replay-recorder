@@ -43,7 +43,7 @@ int main(int argc, char** argv)
     LOG_DEBUG("Main thread id: {}", GetCurrentThreadId());
 
     // Create EventSources to monitor user activity
-    auto inputEventSource = std::make_unique<UserInputEventSource>();
+    auto inputEventSource = std::make_shared<UserInputEventSource>();
     auto windowActivityEventSource = std::make_shared<UserWindowActivityEventSource>();
     auto screenshotEventSource =
         ScreenshotEventSourceBuilder()

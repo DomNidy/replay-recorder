@@ -32,12 +32,14 @@ bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotE
 bool WindowChangeScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotEventSource* source)
 {
     LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy",
-                    "Screenshot timing strategy: Window change, trying to register hook...");
+                    "Screenshot timing strategy screenshotThreadFunction called, trying register ourselves as a "
+                    "FocusObserver...");
 
     Replay::Windows::WindowsHookManager::getInstance().registerObserver<Replay::Windows::FocusObserver>(
         shared_from_this());
 
-    LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy", "Hook installed successfully");
+    LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy",
+                    "Successfully registered as a FocusObserver with WindowsHookManager");
 
     return true;
 }

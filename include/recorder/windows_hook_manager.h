@@ -140,6 +140,7 @@ class WindowsHookManager
     template <typename ConcreteObserver, typename... EventData>
     struct ObserverClassData : public BaseObserverClassData
     {
+        // TODO: We should prob make destructor join this thread
         ObserverClassData()
         {
             eventLoopThread = std::thread(&ObserverClassData::eventLoopThreadFunc, this);
