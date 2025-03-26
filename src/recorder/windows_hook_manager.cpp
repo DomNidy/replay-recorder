@@ -5,18 +5,16 @@ LRESULT CALLBACK Replay::Windows::WindowsHookManager::KeyboardProc(int nCode, WP
 {
     if (nCode >= 0)
     {
-        LOG_CLASS_INFO("WindowsHookManager", "KeyboardProc called");
-        // Parse relevant data needed for event payload
-        bool keyDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
-        DWORD vkCode = ((KBDLLHOOKSTRUCT*)lParam)->vkCode;
+        KeyboardInputEventData eventData(nCode, wParam, lParam);
 
         // Get the class data entry for the keyboard observer class
         auto keyboardInputObserverClassData =
-            WindowsHookManager::getInstance().getObserverClassDataEntry<KeyboardInputObserver, DWORD, bool>();
-        assert(keyboardInputObserverClassData != nullptr);
+            WindowsHookManager::getInstance()
+                .getObserverClassDataEntry<KeyboardInputObserver, KeyboardInputEventData>();
+        assert(keyboardInputObserverClassData != nullptr && "Failed to find keyboard input observer class data entry");
 
         // Push the event payload to the event queue
-        keyboardInputObserverClassData->eventQueue.emplace(std::make_tuple(vkCode, keyDown));
+        keyboardInputObserverClassData->eventQueue.emplace(std::make_tuple(eventData));
         keyboardInputObserverClassData->eventQueueConditionVariable.notify_one();
     }
 
@@ -36,4 +34,13 @@ void CALLBACK Replay::Windows::WindowsHookManager::WinEventProc(HWINEVENTHOOK hW
         focusObserverClassData->eventQueue.emplace(std::make_tuple(hwnd));
         focusObserverClassData->eventQueueConditionVariable.notify_one();
     }
+}
+
+Replay::Windows::KeyboardInputEventData::KeyboardInputEventData() : nCode(0), wParam(0), lParam(0)
+{
+}
+
+Replay::Windows::KeyboardInputEventData::KeyboardInputEventData(int code, WPARAM wp, LPARAM lp)
+    : nCode(code), wParam(wp), lParam(lp)
+{
 }

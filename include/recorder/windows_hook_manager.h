@@ -79,8 +79,23 @@ class BaseObserver
     BaseObserver& operator=(const BaseObserver&) = delete;
 };
 
+// Data the KeyboardInputObserver receives from windows KeyboardProc
+struct KeyboardInputEventData
+{
+    int nCode;
+    WPARAM wParam;
+    LPARAM lParam;
+
+  private:
+    KeyboardInputEventData();
+    KeyboardInputEventData(int code, WPARAM wp, LPARAM lp);
+
+    // Only make the constructors visible to the WindowsHookManager class
+    friend class WindowsHookManager;
+};
+
 // Observer interface for keyboard input events
-class KeyboardInputObserver : public BaseObserver<DWORD, bool>
+class KeyboardInputObserver : public BaseObserver<KeyboardInputEventData>
 {
 
   public:
@@ -88,7 +103,7 @@ class KeyboardInputObserver : public BaseObserver<DWORD, bool>
     {
         return hookTypeToFlag(HookType::LowLevelKeyboard);
     }
-    virtual void onKeyboardInput(DWORD vkCode, bool keyDown) = 0;
+    virtual void onKeyboardInput(KeyboardInputEventData eventData) = 0;
     virtual ~KeyboardInputObserver() = default;
 };
 
@@ -159,7 +174,7 @@ class WindowsHookManager
                 while (!eventQueue.empty())
                 {
                     // Get the event from the queue
-                    std::tuple<EventData...> ev = eventQueue.front();
+                    auto eventTuple = eventQueue.front();
                     eventQueue.pop();
                     lock.unlock();
 
@@ -179,7 +194,7 @@ class WindowsHookManager
                                     observer->onFocusChange(args...);
                                 }
                             },
-                            ev);
+                            eventTuple);
                     }
 
                     // Re-acquire the lock for the next iteration
@@ -313,13 +328,13 @@ class WindowsHookManager
         if constexpr (std::is_base_of_v<KeyboardInputObserver, ConcreteObserver>)
         {
             // Create the class data entry for the keyboard observer if it doesn't exist
-            if (getObserverClassDataEntry<KeyboardInputObserver, DWORD, bool>() == nullptr)
+            if (getObserverClassDataEntry<KeyboardInputObserver, KeyboardInputEventData>() == nullptr)
             {
-                auto classData = internalCreateClassDataEntry<KeyboardInputObserver, DWORD, bool>();
+                auto classData = internalCreateClassDataEntry<KeyboardInputObserver, KeyboardInputEventData>();
             }
 
             // Get the class data entry for the keyboard observer
-            auto keyboardObserverClassData = getObserverClassDataEntry<KeyboardInputObserver, DWORD, bool>();
+            auto keyboardObserverClassData = getObserverClassDataEntry<KeyboardInputObserver, KeyboardInputEventData>();
             assert(keyboardObserverClassData != nullptr);
 
             // Add the observer to the list of keyboard observers, locking it beforehand
@@ -353,7 +368,7 @@ class WindowsHookManager
         {
             std::lock_guard<std::mutex> lock(observerClassDataMutex);
 
-            auto keyboardObserverClassData = getObserverClassDataEntry<KeyboardInputObserver, DWORD, bool>();
+            auto keyboardObserverClassData = getObserverClassDataEntry<KeyboardInputObserver, KeyboardInputEventData>();
             assert(keyboardObserverClassData != nullptr);
 
             // Remove the observer instance from the its class data entry
@@ -396,8 +411,8 @@ class WindowsHookManager
                 }
                 else
                 {
-                    std::cerr
-                        << "[WARNING] Tried to unregister focus observer that was not found in class data entry\n";
+                    LOG_CLASS_WARN("WindowsHookManager",
+                                   "Tried to unregister focus observer that was not found in class data entry");
                 }
             }
         }

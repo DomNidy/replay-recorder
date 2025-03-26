@@ -17,6 +17,8 @@ std::string formatTimestampGetOrdinalDay(int day)
         return ""; // Return empty string for invalid days
     }
     // Static const vector for efficient lookup, initialized once
+    // TODO: Should we just use statically sized array or is vector same level perf wise?
+    // Maybe compiler optimizes it due to const idk
     static const std::vector<std::string> ordinals = {"", // Index 0 unused
                                                       "first",
                                                       "second",

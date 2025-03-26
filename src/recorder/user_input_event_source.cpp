@@ -1,20 +1,8 @@
 #include "user_input_event_source.h"
-
 #include <cassert>
-
 #include <string>
-
 #include "event_sink.h"
 #include "utils/logging.h"
-
-// Maps HHOOKs to the corresponding UserInputEventSource
-HHOOK UserInputEventSource::hKeyboardHook = NULL;
-// The instance that keyboard proc will treat as the owner.
-// this allows us to retrieve the associated instance when the hook is executed (and not use singletons)
-UserInputEventSource *currentInstance = nullptr;
-
-bool leftAltPressed = false;
-bool tabPressed = false;
 
 UserInputEventSource::~UserInputEventSource()
 {
@@ -29,26 +17,8 @@ void UserInputEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
         throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
 
-    if (hKeyboardHook != NULL || currentInstance != nullptr)
-    {
-        throw std::runtime_error(
-            std::string("Tried to initialize a UserInputEventSource, but one was already initialized earlier."
-                        "Only a single UserInputEventSource may exist at any given time. hKeyboardHook must "
-                        "be NULL, and currentInstance must be nullptr!") +
-            "\nWas hKeyboardHook null?: " + (hKeyboardHook == NULL ? "Yes" : "No") +
-            "\nWas currentInstance nullptr?: " + (currentInstance == nullptr ? "Yes" : "No"));
-    }
-    // Handle to the module (a loaded .dll or .exe) that contains
-    // the hook procedure code (NULL = this process)
-    HMODULE hMod = GetModuleHandle(NULL);
-
-    // Install the hook
-    hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, hMod, 0);
-    if (!hKeyboardHook)
-    {
-        throw std::runtime_error("Failed to register keyboard hook: " + std::to_string(GetLastError()));
-    }
-    currentInstance = this;
+    Replay::Windows::WindowsHookManager::getInstance().registerObserver<Replay::Windows::KeyboardInputObserver>(
+        shared_from_this());
 
     LOG_CLASS_INFO("UserInputEventSource", "Successfully installed keyboard hook");
 }
@@ -56,21 +26,12 @@ void UserInputEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
 void UserInputEventSource::uninitializeSource()
 {
     LOG_CLASS_DEBUG("UserInputEventSource", "Uninitializing in thread {}", GetCurrentThreadId());
-    if (hKeyboardHook == NULL)
-    {
-        LOG_CLASS_WARN("UserInputEventSource",
-                       "Keyboard hook was already unhooked, this is expected "
-                       "because the EventSink uninitializes all sources when it is uninitialized. But this design is "
-                       "scuffed, warning so I remember to fix it later.");
-    }
-
-    UnhookWindowsHookEx(hKeyboardHook);
-    hKeyboardHook = NULL;
-    currentInstance = nullptr;
+    Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::KeyboardInputObserver>(
+        shared_from_this());
     LOG_CLASS_INFO("UserInputEventSource", "Successfully uninstalled keyboard hook");
 }
 
-bool handleSpecialKey(int vkCode, EventSink *outputSink)
+bool handleSpecialKey(int vkCode, EventSink* outputSink)
 {
     switch (vkCode)
     {
@@ -101,23 +62,21 @@ bool handleSpecialKey(int vkCode, EventSink *outputSink)
     return true;
 }
 
-LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
+void UserInputEventSource::onKeyboardInput(Replay::Windows::KeyboardInputEventData eventData)
 {
+    auto lockedSink = outputSink.lock();
 
-    UserInputEventSource *instance = currentInstance;
-    auto lockedSink = instance->outputSink.lock();
+    assert(lockedSink != nullptr &&
+           "UserInputEventSource::onKeyboardInput ran, but outputSink was nullptr. This should "
+           "never happen, as the outputSink should be set to a valid EventSink when the hook is installed.");
 
-    assert(instance != nullptr &&
-           "UserInputEventSource::KeyboardProc ran, but currentInstance was nullptr. This should "
-           "never happen, as the currentInstance should be set to null when the hook is removed.");
-
-    if (nCode == HC_ACTION)
+    if (eventData.nCode == HC_ACTION)
     {
         // lParam is a pointer to a KBDLLHOOKSTRUCT
-        KBDLLHOOKSTRUCT *pKeyboard = reinterpret_cast<KBDLLHOOKSTRUCT *>(lParam);
+        KBDLLHOOKSTRUCT* pKeyboard = reinterpret_cast<KBDLLHOOKSTRUCT*>(eventData.lParam);
 
         // Handle keyup down events
-        if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)
+        if (eventData.wParam == WM_KEYDOWN || eventData.wParam == WM_SYSKEYDOWN)
         {
             // Check for ALT+TAB combo
             if (pKeyboard->vkCode == VK_LMENU)
@@ -198,7 +157,7 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
                 }
             }
         }
-        else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP)
+        else if (eventData.wParam == WM_KEYUP || eventData.wParam == WM_SYSKEYUP)
         {
             if (pKeyboard->vkCode == VK_LMENU)
             {
@@ -210,6 +169,4 @@ LRESULT CALLBACK UserInputEventSource::KeyboardProc(int nCode, WPARAM wParam, LP
             }
         }
     }
-
-    return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 }
