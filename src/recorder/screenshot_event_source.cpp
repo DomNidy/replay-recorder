@@ -258,7 +258,7 @@ ScreenshotEventSourceBuilder::ScreenshotEventSourceBuilder()
     // Defaults for the builder
     screenshotOutputDirectory = std::filesystem::path("./replay-screenshots");
     serializationStrategyType = ScreenshotSerializationStrategyType::FilePath;
-    timingStrategy = std::make_unique<FixedIntervalScreenshotTimingStrategy>(60, 60);
+    timingStrategy = std::make_shared<FixedIntervalScreenshotTimingStrategy>(60, 60);
 }
 
 ScreenshotEventSourceBuilder& ScreenshotEventSourceBuilder::withScreenshotOutputDirectory(
@@ -282,22 +282,21 @@ ScreenshotEventSourceBuilder& ScreenshotEventSourceBuilder::withScreenshotTiming
     return *this;
 }
 
-std::unique_ptr<ScreenshotEventSource> ScreenshotEventSourceBuilder::build()
+std::shared_ptr<ScreenshotEventSource> ScreenshotEventSourceBuilder::build()
 {
     validate();
 
-    std::unique_ptr<ScreenshotEventSource> source = std::make_unique<ScreenshotEventSource>();
+    auto source = std::make_shared<ScreenshotEventSource>();
 
     // Give source a pointer to its timing strategy to use
-    source->timingStrategy = timingStrategy;
 
+    // If our timing strategy was WindowChangeScreenshotTimingStrategy
     if (auto windowChangeTimingStrategy =
-            dynamic_cast<WindowChangeScreenshotTimingStrategy*>(source->timingStrategy.get()))
+            std::dynamic_pointer_cast<WindowChangeScreenshotTimingStrategy>(timingStrategy))
     {
         LOG_CLASS_DEBUG("ScreenshotEventSourceBuilder", "Setting timing strategy to window change");
-        // TODO: Review this code. Seems weird but too tired right now to think straight
-        // Looks odd bc we're making circular ownership references here (e.g., source has ptr to timingStrategy, and
-        // vise-versa), but we are using raw ptr instead of weak_ptr.
+        // TODO: Review this code and prob make it use weak ptr
+        source->timingStrategy = windowChangeTimingStrategy;
         windowChangeTimingStrategy->source = source.get();
     }
 

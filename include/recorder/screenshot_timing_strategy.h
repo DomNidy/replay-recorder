@@ -17,8 +17,6 @@ enum class ScreenshotTimingStrategyType
     FixedInterval
 };
 
-typedef bool (ScreenshotEventSource::*CaptureScreenshotFunction)();
-
 class ScreenshotTimingStrategy
 {
   public:
@@ -79,7 +77,9 @@ class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy,
 
     virtual ~WindowChangeScreenshotTimingStrategy();
 
+    //~ Begin ScreenshotTimingStrategy interface
     virtual bool screenshotThreadFunction(ScreenshotEventSource* source) override;
+    //~ End ScreenshotTimingStrategy interface
 
   private:
     //~ Begin Replay::Windows::FocusObserver interface
@@ -119,7 +119,9 @@ class FixedIntervalScreenshotTimingStrategy : public ScreenshotTimingStrategy
     {
     }
 
+    //~ Begin ScreenshotTimingStrategy interface
     virtual bool screenshotThreadFunction(ScreenshotEventSource* source) override;
+    //~ End ScreenshotTimingStrategy interface
 
   private:
     // Number of seconds between screenshots

@@ -32,11 +32,14 @@
 // The class is intended to be created using the ScreenshotEventSourceBuilder, which
 // provides a fluent interface for configuration. Example:
 //
+//
+// ```cpp
 // auto builder = ScreenshotEventSourceBuilder()
 //     .withScreenshotOutputDirectory("./screenshots")
 //     .withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType::FilePath)
 //     .withScreenshotTimingStrategy(std::make_shared<WindowChangeScreenshotTimingStrategy>());
 // auto source = builder.build();
+// ```
 class ScreenshotEventSource : public EventSource
 {
     // These classes need access to the captureScreenshot method
@@ -95,12 +98,14 @@ class ScreenshotEventSource : public EventSource
 // - Configuring the timing strategy (window change or fixed interval)
 // - Validating the configuration before building
 //
-// Example usage:
-//   auto builder = ScreenshotEventSourceBuilder()
-//       .withScreenshotOutputDirectory("./screenshots")
-//       .withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType::FilePath)
-//       .withScreenshotTimingStrategy(std::make_shared<WindowChangeScreenshotTimingStrategy>());
-//   auto source = builder.build();
+// Example Usage:
+// ```cpp
+// auto builder = ScreenshotEventSourceBuilder()
+//     .withScreenshotOutputDirectory("./screenshots")
+//     .withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType::FilePath)
+//     .withScreenshotTimingStrategy(std::make_shared<WindowChangeScreenshotTimingStrategy>());
+// auto source = builder.build();
+// ```
 class ScreenshotEventSourceBuilder
 {
   public:
@@ -122,7 +127,7 @@ class ScreenshotEventSourceBuilder
     // - FixedIntervalScreenshotTimingStrategy: Take screenshots at fixed time intervals
     ScreenshotEventSourceBuilder& withScreenshotTimingStrategy(
         std::shared_ptr<ScreenshotTimingStrategy> timingStrategy);
-    std::unique_ptr<ScreenshotEventSource> build();
+    std::shared_ptr<ScreenshotEventSource> build();
 
   private:
     void validate();
