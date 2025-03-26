@@ -14,7 +14,7 @@ ScreenshotEventSource::ScreenshotEventSource() : outputSink(std::weak_ptr<EventS
 ScreenshotEventSource::~ScreenshotEventSource()
 {
     LOG_CLASS_DEBUG("ScreenshotEventSource", "Destructor called");
-    // uninitializeSource();
+    uninitializeSource();
 }
 
 void ScreenshotEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
@@ -186,7 +186,7 @@ bool ScreenshotEventSource::captureScreenshot()
     bi.biCompression = BI_RGB;
 
     // Allocate memory for bitmap bits
-    BYTE *pixels = new (std::nothrow) BYTE[monitorWidth * monitorHeight * 3]; // 3 bytes per pixel (RGB)
+    BYTE* pixels = new (std::nothrow) BYTE[monitorWidth * monitorHeight * 3]; // 3 bytes per pixel (RGB)
     if (!pixels)
     {
         LOG_CLASS_ERROR("ScreenshotEventSource", "Failed to allocate memory for pixels");
@@ -198,7 +198,7 @@ bool ScreenshotEventSource::captureScreenshot()
     }
 
     // Get the bitmap bits
-    if (!GetDIBits(memDC, bitmap, 0, monitorHeight, pixels, (BITMAPINFO *)&bi, DIB_RGB_COLORS))
+    if (!GetDIBits(memDC, bitmap, 0, monitorHeight, pixels, (BITMAPINFO*)&bi, DIB_RGB_COLORS))
     {
         LOG_CLASS_ERROR("ScreenshotEventSource", "Failed to get DIBits");
         delete[] pixels;
@@ -210,7 +210,7 @@ bool ScreenshotEventSource::captureScreenshot()
     }
 
     // Create a buffer to hold the RGB data (stbi_write_png expects RGB format)
-    BYTE *rgbData = new (std::nothrow) BYTE[monitorWidth * monitorHeight * 3];
+    BYTE* rgbData = new (std::nothrow) BYTE[monitorWidth * monitorHeight * 3];
     if (!rgbData)
     {
         LOG_CLASS_ERROR("ScreenshotEventSource", "Failed to allocate memory for rgbData");
@@ -261,21 +261,21 @@ ScreenshotEventSourceBuilder::ScreenshotEventSourceBuilder()
     timingStrategy = std::make_unique<FixedIntervalScreenshotTimingStrategy>(60, 60);
 }
 
-ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withScreenshotOutputDirectory(
+ScreenshotEventSourceBuilder& ScreenshotEventSourceBuilder::withScreenshotOutputDirectory(
     std::filesystem::path screenshotOutputDirectory)
 {
     this->screenshotOutputDirectory = screenshotOutputDirectory;
     return *this;
 }
 
-ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withScreenshotSerializationStrategy(
+ScreenshotEventSourceBuilder& ScreenshotEventSourceBuilder::withScreenshotSerializationStrategy(
     ScreenshotSerializationStrategyType strategyType)
 {
     this->serializationStrategyType = strategyType;
     return *this;
 }
 
-ScreenshotEventSourceBuilder &ScreenshotEventSourceBuilder::withScreenshotTimingStrategy(
+ScreenshotEventSourceBuilder& ScreenshotEventSourceBuilder::withScreenshotTimingStrategy(
     std::shared_ptr<ScreenshotTimingStrategy> timingStrategy)
 {
     this->timingStrategy = timingStrategy;
@@ -292,9 +292,12 @@ std::unique_ptr<ScreenshotEventSource> ScreenshotEventSourceBuilder::build()
     source->timingStrategy = timingStrategy;
 
     if (auto windowChangeTimingStrategy =
-            dynamic_cast<WindowChangeScreenshotTimingStrategy *>(source->timingStrategy.get()))
+            dynamic_cast<WindowChangeScreenshotTimingStrategy*>(source->timingStrategy.get()))
     {
         LOG_CLASS_DEBUG("ScreenshotEventSourceBuilder", "Setting timing strategy to window change");
+        // TODO: Review this code. Seems weird but too tired right now to think straight
+        // Looks odd bc we're making circular ownership references here (e.g., source has ptr to timingStrategy, and
+        // vise-versa), but we are using raw ptr instead of weak_ptr.
         windowChangeTimingStrategy->source = source.get();
     }
 

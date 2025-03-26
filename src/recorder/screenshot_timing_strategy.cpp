@@ -77,6 +77,8 @@ void WindowChangeScreenshotTimingStrategy::onFocusChange(HWND hwnd)
 WindowChangeScreenshotTimingStrategy::~WindowChangeScreenshotTimingStrategy()
 {
     LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy", "Destructor called, trying to unregister hook...");
+    Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::FocusObserver>(
+        shared_from_this());
 }
 
 uint32_t ScreenshotTimingStrategy::getLastInputTime() const

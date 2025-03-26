@@ -1,102 +1,74 @@
 #include "timestamp_utils.h"
 
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace RP::Utils
 {
+// Replaced switch statement with a static vector lookup for conciseness
 std::string formatTimestampGetOrdinalDay(int day)
 {
-    switch (day)
+    if (day < 1 || day > 31)
     {
-    case 1:
-        return "first";
-    case 2:
-        return "second";
-    case 3:
-        return "third";
-    case 4:
-        return "fourth";
-    case 5:
-        return "fifth";
-    case 6:
-        return "sixth";
-    case 7:
-        return "seventh";
-    case 8:
-        return "eighth";
-    case 9:
-        return "ninth";
-    case 10:
-        return "tenth";
-    case 11:
-        return "eleventh";
-    case 12:
-        return "twelfth";
-    case 13:
-        return "thirteenth";
-    case 14:
-        return "fourteenth";
-    case 15:
-        return "fifteenth";
-    case 16:
-        return "sixteenth";
-    case 17:
-        return "seventeenth";
-    case 18:
-        return "eighteenth";
-    case 19:
-        return "nineteenth";
-    case 20:
-        return "twentieth";
-    case 21:
-        return "twenty-first";
-    case 22:
-        return "twenty-second";
-    case 23:
-        return "twenty-third";
-    case 24:
-        return "twenty-fourth";
-    case 25:
-        return "twenty-fifth";
-    case 26:
-        return "twenty-sixth";
-    case 27:
-        return "twenty-seventh";
-    case 28:
-        return "twenty-eighth";
-    case 29:
-        return "twenty-ninth";
-    case 30:
-        return "thirtieth";
-    case 31:
-        return "thirty-first";
-    default:
-        return ""; // Handle invalid day if necessary
+        return ""; // Return empty string for invalid days
     }
+    // Static const vector for efficient lookup, initialized once
+    static const std::vector<std::string> ordinals = {"", // Index 0 unused
+                                                      "first",
+                                                      "second",
+                                                      "third",
+                                                      "fourth",
+                                                      "fifth",
+                                                      "sixth",
+                                                      "seventh",
+                                                      "eighth",
+                                                      "ninth",
+                                                      "tenth",
+                                                      "eleventh",
+                                                      "twelfth",
+                                                      "thirteenth",
+                                                      "fourteenth",
+                                                      "fifteenth",
+                                                      "sixteenth",
+                                                      "seventeenth",
+                                                      "eighteenth",
+                                                      "nineteenth",
+                                                      "twentieth",
+                                                      "twenty-first",
+                                                      "twenty-second",
+                                                      "twenty-third",
+                                                      "twenty-fourth",
+                                                      "twenty-fifth",
+                                                      "twenty-sixth",
+                                                      "twenty-seventh",
+                                                      "twenty-eighth",
+                                                      "twenty-ninth",
+                                                      "thirtieth",
+                                                      "thirty-first"};
+    return ordinals[day];
 }
 
-std::string formatTimestampToLLMReadable(std::tm *time)
+std::string formatTimestampToLLMReadable(std::tm* time)
 {
     if (!time)
     {
         throw std::runtime_error("Received nullptr instead of std::tm");
     }
 
-    // Get ordinal day (e.g., "first", "thirtieth")
     std::string dayOrdinal = formatTimestampGetOrdinalDay(time->tm_mday);
-
-    char yearMonth[100];
-    std::strftime(yearMonth, sizeof(yearMonth), "%Y %B", time);
-
-    char timePart[10];
-    std::strftime(timePart, sizeof(timePart), "%H:%M", time);
+    if (dayOrdinal.empty())
+    {
+        throw std::runtime_error("Invalid day encountered while formatting timestamp");
+    }
 
     std::stringstream ss;
-    ss << yearMonth << " " << dayOrdinal << " " << timePart;
+    ss << std::put_time(time, "%Y %B") << " " << dayOrdinal << std::put_time(time, " %H:%M");
 
     return ss.str();
 }
+
 } // namespace RP::Utils
