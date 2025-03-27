@@ -35,9 +35,6 @@ class EventSink : public std::enable_shared_from_this<EventSink>
 
     const std::vector<std::weak_ptr<EventSource>> getSources() const;
 
-    // Cleans up all the event sources
-    void uninitializeSink();
-
   private:
     // Vector of weak pointers to event sources
     // Need to be weak pointers to avoid circular references. Starting to think that maybe this C++ language isn't for

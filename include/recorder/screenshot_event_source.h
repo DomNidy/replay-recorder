@@ -54,13 +54,11 @@ class ScreenshotEventSource : public EventSource
     bool getIsRunning() const;
 
   private:
-    // Initializes the event source with the provided sink and starts the screenshot thread
-    // Throws std::runtime_error if the sink is nullptr or expired
+    //~ Begin EventSource interfacej
     virtual void initializeSource(std::weak_ptr<EventSink> inSink) override;
+    //~ End EventSource interface
 
-    // Stops the screenshot thread and performs cleanup
-    virtual void uninitializeSource() override;
-
+  private:
     // Reference to the event sink where screenshots will be sent
     std::weak_ptr<EventSink> outputSink;
 
@@ -110,7 +108,10 @@ class ScreenshotEventSourceBuilder
 {
   public:
     ScreenshotEventSourceBuilder();
-    ~ScreenshotEventSourceBuilder() = default;
+    ~ScreenshotEventSourceBuilder()
+    {
+        LOG_CLASS_DEBUG("ScreenshotEventSourceBuilder", "Destructor called");
+    }
 
     // Sets the directory where screenshots will be saved when using FilePath serialization strategy
     // The directory will be created if it doesn't exist during build()

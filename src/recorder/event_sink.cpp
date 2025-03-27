@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-EventSink::EventSink(const std::string &name)
+EventSink::EventSink(const std::string& name)
 {
     file.open(name, std::ios::out | std::ios::app | std::ios::binary);
     LOG_CLASS_INFO("EventSink", "Max recording buffer size: {}", MAX_RECORDING_BUFFER_SIZE);
@@ -16,17 +16,20 @@ EventSink::EventSink(const std::string &name)
 
 EventSink::~EventSink()
 {
+    LOG_CLASS_DEBUG("EventSink", "Destructor called");
     if (file.is_open())
     {
         flushData();
         file.close();
     }
+
+    sources.clear();
 }
 
 void EventSink::addSource(std::shared_ptr<EventSource> source)
 {
     // Initialize the source with a pointer to this EventSink
-    LOG_CLASS_DEBUG("EventSink", "Adding a source...");
+    LOG_CLASS_DEBUG("EventSink", "Adding source of {}...", typeid(*source.get()).name());
     source->initializeSource(shared_from_this());
     sources.push_back(source);
 }
@@ -34,7 +37,7 @@ void EventSink::addSource(std::shared_ptr<EventSource> source)
 const std::vector<std::weak_ptr<EventSource>> EventSink::getSources() const
 {
     std::vector<std::weak_ptr<EventSource>> weakSources;
-    for (const auto &src : sources)
+    for (const auto& src : sources)
     {
         weakSources.push_back(src);
     }
@@ -42,7 +45,7 @@ const std::vector<std::weak_ptr<EventSource>> EventSink::getSources() const
     return weakSources;
 }
 
-EventSink &EventSink::operator<<(const char *data)
+EventSink& EventSink::operator<<(const char* data)
 {
     // Get buffer size needed to perform the conversion
     int len = MultiByteToWideChar(CP_UTF8, 0, data, -1, nullptr, 0);
@@ -68,22 +71,13 @@ EventSink &EventSink::operator<<(const char *data)
     return *this;
 }
 
-EventSink &EventSink::operator<<(const wchar_t *data)
+EventSink& EventSink::operator<<(const wchar_t* data)
 {
     size_t len = wcslen(data);
 
     recordingBuffer.insert(recordingBuffer.end(), data, (data + len));
     flushIfMaxSizeExceeded();
     return *this;
-}
-
-void EventSink::uninitializeSink()
-{
-    LOG_CLASS_DEBUG("EventSink", "Uninitializing in thread {}", GetCurrentThreadId());
-    for (auto &source : sources)
-    {
-        source->uninitializeSource();
-    }
 }
 
 inline void EventSink::flushData()
@@ -102,7 +96,7 @@ inline void EventSink::flushData()
                 converter.to_bytes(recordingBuffer.data(), (recordingBuffer.data() + recordingBuffer.size()));
             file.write(text.data(), text.size());
         }
-        catch (const std::range_error &e)
+        catch (const std::range_error& e)
         {
             LOG_CLASS_ERROR("EventSink", "Error converting UTF-16 to UTF-8: {}", e.what());
         }

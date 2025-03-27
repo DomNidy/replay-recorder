@@ -15,20 +15,20 @@ class UserWindowActivityEventSource : public EventSource,
                                       public Replay::Windows::FocusObserver,
                                       public std::enable_shared_from_this<UserWindowActivityEventSource>
 {
-
   public:
     UserWindowActivityEventSource() = default;
     ~UserWindowActivityEventSource();
 
   private:
+    //~ Begin Replay::Windows::FocusObserver interface
+    void onFocusChange(HWND hwnd) override;
+    //~ End Replay::Windows::FocusObserver interface
+
+    //~ Begin EventSource interface
     virtual void initializeSource(std::weak_ptr<EventSink> inSink) override;
-    virtual void uninitializeSource() override;
-
-    std::weak_ptr<EventSink> outputSink;
-
-    // Returns the name of the process corresponding to the focused window
-    bool getWindowTitle(HWND hWindow, std::string& destStr);
+    //~ End EventSource interface
 
   private:
-    void onFocusChange(HWND hwnd) override;
+    std::weak_ptr<EventSink> outputSink;
+    bool getWindowTitle(HWND hWindow, std::string& destStr);
 };

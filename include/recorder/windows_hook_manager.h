@@ -127,6 +127,13 @@ class WindowsHookManager
     {
     }
 
+    // Destructor
+    ~WindowsHookManager()
+    {
+        LOG_CLASS_DEBUG("WindowsHookManager", "Destructor called");
+        uninstallHooks();
+    }
+
     // This exists to allow polymorphic storage of ObserverClassData
     class BaseObserverClassData
     {
@@ -140,11 +147,37 @@ class WindowsHookManager
     template <typename ConcreteObserver, typename... EventData>
     struct ObserverClassData : public BaseObserverClassData
     {
+        // Signal when to terminate the thread
+        std::atomic<bool> terminateThread{false};
+
         // TODO: We should prob make destructor join this thread
         ObserverClassData()
         {
             eventLoopThread = std::thread(&ObserverClassData::eventLoopThreadFunc, this);
         }
+
+        ~ObserverClassData()
+        {
+            LOG_CLASS_DEBUG("ObserverClassData", "Destructor called");
+
+            // Signal the thread to terminate
+            terminateThread = true;
+
+            // Wake up the thread if it's waiting on the condition variable
+            {
+                std::lock_guard<std::mutex> lock(eventQueueMutex);
+                eventQueueConditionVariable.notify_one();
+            }
+
+            // Join the thread if it's joinable
+            if (eventLoopThread.joinable())
+            {
+                LOG_CLASS_DEBUG("ObserverClassData", "Joining event loop thread");
+                eventLoopThread.join();
+                LOG_CLASS_DEBUG("ObserverClassData", "Event loop thread joined");
+            }
+        }
+
         // Queue of events for this observer class
         std::queue<std::tuple<EventData...>> eventQueue;
         std::mutex eventQueueMutex;
@@ -164,12 +197,20 @@ class WindowsHookManager
         // Wait for events to be added to queue, process them, then go back to sleep
         void eventLoopThreadFunc()
         {
-            while (true)
+            while (!terminateThread)
             {
-                std::unique_lock<std::mutex> lock(eventQueueMutex);
+                std::unique_lock<std::mutex> eventQueueLock(eventQueueMutex);
 
                 // Sleep thread and only awake when we're notified and there are events to process
-                eventQueueConditionVariable.wait(lock, [this]() { return !eventQueue.empty(); });
+                // or the termination flag is set
+                eventQueueConditionVariable.wait(eventQueueLock,
+                                                 [this]() { return !eventQueue.empty() || terminateThread; });
+
+                // Check termination flag after waking up
+                if (terminateThread)
+                {
+                    break;
+                }
 
                 // Process all events in the queue
                 while (!eventQueue.empty())
@@ -177,7 +218,7 @@ class WindowsHookManager
                     // Get the event from the queue
                     auto eventTuple = eventQueue.front();
                     eventQueue.pop();
-                    lock.unlock();
+                    eventQueueLock.unlock();
 
                     // Process all observers (with lock for thread safety)
                     std::lock_guard<std::mutex> observersLock(observersMutex);
@@ -199,7 +240,13 @@ class WindowsHookManager
                     }
 
                     // Re-acquire the lock for the next iteration
-                    lock.lock();
+                    eventQueueLock.lock();
+
+                    // Check termination flag
+                    if (terminateThread)
+                    {
+                        break;
+                    }
                 }
             }
         }
@@ -231,17 +278,11 @@ class WindowsHookManager
         return instance;
     }
 
-    // Destructor
-    ~WindowsHookManager()
-    {
-        uninstallHooks();
-    }
-
   private:
     // Internal method that installs hooks for a given observer if they are not
     // already installed. Observers need to receive data from windows hooks.
-    template <typename ObserverType>
-    void internalInstallHooksForObserver(ObserverType* observer)
+    template <typename ConcreteObserver>
+    void internalInstallHooksForObserver(ConcreteObserver* observer)
     {
         // Low level keyboard hook installation
         if (observer->requiresHook(HookType::LowLevelKeyboard) &&
@@ -256,9 +297,15 @@ class WindowsHookManager
             }
 
             // Create a lambda function which can unhook the keyboard hook
-            unhookFunctions[HookType::LowLevelKeyboard] = [hookHandle]() { UnhookWindowsHookEx(hookHandle); };
+            unhookFunctions[HookType::LowLevelKeyboard] = [hookHandle]() {
+                LOG_CLASS_DEBUG("WindowsHookManager",
+                                "unhookFunctions[HookType::LowLevelKeyboard] Unhooking keyboard hook");
+                UnhookWindowsHookEx(hookHandle);
+                LOG_CLASS_DEBUG("WindowsHookManager",
+                                "unhookFunctions[HookType::LowLevelKeyboard] Keyboard hook unhooked successfully");
+            };
 
-            LOG_CLASS_INFO("WindowsHookManager", "Keyboard hook installed successfully");
+            LOG_CLASS_DEBUG("WindowsHookManager", "HookType::LowLevelKeyboard Keyboard hook installed successfully");
         }
         // Event system foreground hook installation
         if (observer->requiresHook(HookType::EventSystemForeground) &&
@@ -276,9 +323,15 @@ class WindowsHookManager
             }
 
             // Create a lambda function which can unhook the focus hook
-            unhookFunctions[HookType::EventSystemForeground] = [hookHandle]() { UnhookWinEvent(hookHandle); };
+            unhookFunctions[HookType::EventSystemForeground] = [hookHandle]() {
+                LOG_CLASS_DEBUG("WindowsHookManager",
+                                "unhookFunctions[HookType::EventSystemForeground] Unhooking focus hook");
+                UnhookWinEvent(hookHandle);
+                LOG_CLASS_DEBUG("WindowsHookManager",
+                                "unhookFunctions[HookType::EventSystemForeground] Focus hook unhooked successfully");
+            };
 
-            LOG_CLASS_INFO("WindowsHookManager", "Focus hook installed successfully");
+            LOG_CLASS_DEBUG("WindowsHookManager", "HookType::EventSystemForeground Focus hook installed successfully");
         }
     }
 
@@ -296,8 +349,8 @@ class WindowsHookManager
             auto sharedClassData = std::make_shared<ObserverClassData<ConcreteObserver, EventData...>>();
             observerClassData[typeid(ConcreteObserver)] = sharedClassData;
 
-            LOG_CLASS_INFO("WindowsHookManager", "Class data entry created for type {}",
-                           typeid(ConcreteObserver).name());
+            LOG_CLASS_DEBUG("WindowsHookManager", "Class data entry created for type {}",
+                            typeid(ConcreteObserver).name());
 
             // Return the shared pointer directly
             return sharedClassData;
@@ -311,9 +364,16 @@ class WindowsHookManager
     template <typename ConcreteObserver, typename... EventData>
     ObserverClassData<ConcreteObserver, EventData...>* getObserverClassDataEntry()
     {
+
+        LOG_CLASS_DEBUG("WindowsHookManager", "Getting observer class data entry for type {}",
+                        typeid(ConcreteObserver).name());
+        // ERROR: This throws read access violation
+        // this->_Vec._Mypair._Myval2._Myfirst was 0x11101110111015A.
         auto it = observerClassData.find(typeid(ConcreteObserver));
         if (it != observerClassData.end())
         {
+            LOG_CLASS_DEBUG("WindowsHookManager", "Found observer class data entry for type {}",
+                            typeid(ConcreteObserver).name());
             return dynamic_cast<ObserverClassData<ConcreteObserver, EventData...>*>(it->second.get());
         }
         return nullptr;
@@ -324,6 +384,7 @@ class WindowsHookManager
     template <typename ConcreteObserver>
     void registerObserver(std::shared_ptr<ConcreteObserver> observer)
     {
+        LOG_CLASS_DEBUG("WindowsHookManager", "Registering observer of type {}", typeid(ConcreteObserver).name());
         internalInstallHooksForObserver(observer.get());
 
         if constexpr (std::is_base_of_v<KeyboardInputObserver, ConcreteObserver>)
@@ -365,12 +426,12 @@ class WindowsHookManager
     template <typename ConcreteObserver>
     void unregisterObserver(std::shared_ptr<ConcreteObserver> observer)
     {
+        LOG_CLASS_DEBUG("WindowsHookManager", "Unregistering observer of type {}", typeid(ConcreteObserver).name());
         if constexpr (std::is_base_of_v<KeyboardInputObserver, ConcreteObserver>)
         {
             std::lock_guard<std::mutex> lock(observerClassDataMutex);
 
             auto keyboardObserverClassData = getObserverClassDataEntry<KeyboardInputObserver, KeyboardInputEventData>();
-            assert(keyboardObserverClassData != nullptr);
 
             // Remove the observer instance from the its class data entry
             {
@@ -433,11 +494,20 @@ class WindowsHookManager
             return;
         }
 
+        // Call the unhook function for each hook type
         for (const auto& hookType : hooksToUninstall)
         {
+            // TODO: This is not thread safe, but not a concern for now since this is called from the destructor
+            // Run the unhook function
             unhookFunctions[hookType]();
-            LOG_CLASS_INFO("WindowsHookManager", "Hook of type {} uninstalled", static_cast<int>(hookType));
+
+            // Remove the unhook function from the map
             unhookFunctions.erase(hookType);
+
+            LOG_CLASS_INFO("WindowsHookManager", "Hook of type {} uninstalled",
+                           hookType == HookType::LowLevelKeyboard        ? "LowLevelKeyboard"
+                           : hookType == HookType::EventSystemForeground ? "EventSystemForeground"
+                                                                         : "Unknown");
         }
     }
 };

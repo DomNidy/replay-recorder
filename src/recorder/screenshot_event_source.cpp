@@ -14,7 +14,21 @@ ScreenshotEventSource::ScreenshotEventSource() : outputSink(std::weak_ptr<EventS
 ScreenshotEventSource::~ScreenshotEventSource()
 {
     LOG_CLASS_DEBUG("ScreenshotEventSource", "Destructor called");
-    uninitializeSource();
+    LOG_CLASS_DEBUG("ScreenshotEventSource", "Uninitializing in thread {}", GetCurrentThreadId());
+    if (isRunning)
+    {
+        isRunning = false;
+        if (screenshotThread.joinable())
+        {
+            LOG_CLASS_DEBUG("ScreenshotEventSource", "Screenshot thread is joinable, joining it");
+            screenshotThread.join();
+        }
+        else
+        {
+            LOG_CLASS_DEBUG("ScreenshotEventSource", "Screenshot thread is not joinable, it is already joined");
+        }
+        LOG_CLASS_INFO("ScreenshotEventSource", "Uninitialized");
+    }
 }
 
 void ScreenshotEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
@@ -37,25 +51,6 @@ void ScreenshotEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
     screenshotThread = std::thread(&ScreenshotTimingStrategy::screenshotThreadFunction, timingStrategy.get(), this);
 
     LOG_CLASS_INFO("ScreenshotEventSource", "Successfully initialized");
-}
-
-void ScreenshotEventSource::uninitializeSource()
-{
-    LOG_CLASS_DEBUG("ScreenshotEventSource", "Uninitializing in thread {}", GetCurrentThreadId());
-    if (isRunning)
-    {
-        isRunning = false;
-        if (screenshotThread.joinable())
-        {
-            LOG_CLASS_DEBUG("ScreenshotEventSource", "Screenshot thread is joinable, joining it");
-            screenshotThread.join();
-        }
-        else
-        {
-            LOG_CLASS_DEBUG("ScreenshotEventSource", "Screenshot thread is not joinable, it is already joined");
-        }
-        LOG_CLASS_INFO("ScreenshotEventSource", "Uninitialized");
-    }
 }
 
 bool ScreenshotEventSource::getIsRunning() const
@@ -312,7 +307,7 @@ std::shared_ptr<ScreenshotEventSource> ScreenshotEventSourceBuilder::build()
         throw std::runtime_error(RP_ERR_INVALID_SCREENSHOT_SERIALIZATION_STRATEGY);
     }
 
-    return std::move(source);
+    return source;
 }
 
 void ScreenshotEventSourceBuilder::validate()

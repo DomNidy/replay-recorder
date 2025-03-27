@@ -20,7 +20,10 @@ enum class ScreenshotTimingStrategyType
 class ScreenshotTimingStrategy
 {
   public:
-    virtual ~ScreenshotTimingStrategy() = default;
+    virtual ~ScreenshotTimingStrategy()
+    {
+        LOG_CLASS_DEBUG("ScreenshotTimingStrategy", "Destructor called");
+    }
     ScreenshotTimingStrategy() = default;
 
     virtual bool screenshotThreadFunction(ScreenshotEventSource* source) = 0;
@@ -117,6 +120,11 @@ class FixedIntervalScreenshotTimingStrategy : public ScreenshotTimingStrategy
     FixedIntervalScreenshotTimingStrategy(uint32_t intervalSeconds = 60, uint32_t pauseAfterIdleSeconds = 60)
         : intervalSeconds(intervalSeconds), pauseAfterIdleSeconds(pauseAfterIdleSeconds)
     {
+    }
+    
+    ~FixedIntervalScreenshotTimingStrategy()
+    {
+        LOG_CLASS_DEBUG("FixedIntervalScreenshotTimingStrategy", "Destructor called");
     }
 
     //~ Begin ScreenshotTimingStrategy interface

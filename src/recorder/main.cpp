@@ -1,5 +1,5 @@
 #include <windows.h>
-
+#include <atomic>
 #include <csignal>
 #include <iostream>
 #include <memory>
@@ -9,38 +9,44 @@
 #include "user_window_activity_event_source.h"
 #include "utils/logging.h"
 #include "windows_hook_manager.h"
-namespace
-{
-std::shared_ptr<EventSink> g_eventSink;
-}
 
+std::atomic<DWORD> g_mainThreadId{0};
 void signalHandler(int signal)
 {
-    if (signal == SIGINT)
+    if (signal != SIGINT)
     {
-        LOG_INFO("--- Gracefully shutting down in thread {} ---", GetCurrentThreadId());
-
-        if (g_eventSink)
-        {
-            g_eventSink->uninitializeSink();
-            g_eventSink.reset();
-        }
-        exit(0);
+        return;
     }
+
+    LOG_DEBUG("---Graceful shutdown signal received in thread {} ---", GetCurrentThreadId());
+
+    if (g_mainThreadId == 0)
+    {
+        LOG_ERROR("Main thread id not set, cannot send WM_QUIT message to it");
+        std::exit(signal);
+    }
+
+    if (!PostThreadMessage(g_mainThreadId, WM_QUIT, 0, 0))
+    {
+        LOG_ERROR("Error posting WM_QUIT message to main thread: {}", static_cast<int>(GetLastError()));
+        std::exit(signal);
+    }
+
+    LOG_DEBUG("WM_QUIT message posted to main thread ({})", g_mainThreadId.load());
 }
 
 int main(int argc, char** argv)
 {
     RP::Logging::initLogging(spdlog::level::debug);
+    g_mainThreadId = GetCurrentThreadId();
+    LOG_DEBUG("Main thread id: {}", g_mainThreadId.load());
     std::signal(SIGINT, signalHandler);
 
     // Initialize the windows hook manager (should be done before creating any event sources and in the main thread)
     Replay::Windows::WindowsHookManager::getInstance();
 
     // Initialize event sink
-    g_eventSink = std::make_shared<EventSink>("out.txt");
-
-    LOG_DEBUG("Main thread id: {}", GetCurrentThreadId());
+    auto eventSink = std::make_shared<EventSink>("out.txt");
 
     // Create EventSources to monitor user activity
     auto inputEventSource = std::make_shared<UserInputEventSource>();
@@ -54,13 +60,13 @@ int main(int argc, char** argv)
             .build();
 
     // Add sources to sink
-    g_eventSink->addSource(std::move(inputEventSource));
-    g_eventSink->addSource(std::move(windowActivityEventSource));
-    g_eventSink->addSource(std::move(screenshotEventSource));
+    eventSink->addSource(inputEventSource);
+    eventSink->addSource(windowActivityEventSource);
+    eventSink->addSource(screenshotEventSource);
 
     BOOL ret;
     MSG msg;
-    while ((ret = GetMessage(&msg, NULL, WM_KEYFIRST, WM_MOUSELAST)) != 0)
+    while ((ret = GetMessage(&msg, NULL, 0, 0)) != 0)
     {
         if (ret == -1)
         {
@@ -69,4 +75,6 @@ int main(int argc, char** argv)
                                      GetLastError());
         }
     }
+
+    LOG_DEBUG("--- Shutting down... ---");
 }

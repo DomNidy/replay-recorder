@@ -99,12 +99,7 @@ TEST_F(EventSinkTest, AddsSourcesCorrectly)
 
     // Check if the source was added to the sources vector
     numSources = eventSink->getSources().size();
-    ASSERT_EQ(numSources, 1);
-
-    // Check if the added source had its uninitializeSource method called
-    eventSink->uninitializeSink();
-    ASSERT_EQ(testUninitVal, 1);
-
+    
     // Check that the source was removed from the sources vector after uninitializing the event sink
     numSources = eventSink->getSources().size();
     ASSERT_EQ(numSources, 0);

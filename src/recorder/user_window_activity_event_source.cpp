@@ -11,12 +11,6 @@
 UserWindowActivityEventSource::~UserWindowActivityEventSource()
 {
     LOG_CLASS_DEBUG("UserWindowActivityEventSource", "Destructor called");
-}
-
-void UserWindowActivityEventSource::uninitializeSource()
-{
-    LOG_CLASS_DEBUG("UserWindowActivityEventSource", "Uninitializing in thread id: {}", GetCurrentThreadId());
-
     Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::FocusObserver>(
         shared_from_this());
 
@@ -43,7 +37,8 @@ void UserWindowActivityEventSource::initializeSource(std::weak_ptr<EventSink> in
 void UserWindowActivityEventSource::onFocusChange(HWND hwnd)
 {
     std::string windowTitle;
-    LOG_CLASS_DEBUG("UserWindowActivityEventSource", "onFocusChange called with hwnd: {}", reinterpret_cast<void*>(hwnd));
+    LOG_CLASS_DEBUG("UserWindowActivityEventSource", "onFocusChange called with hwnd: {}",
+                    reinterpret_cast<void*>(hwnd));
     if (getWindowTitle(hwnd, windowTitle))
     {
         // Special separator token, produced when focus enters and exits a window

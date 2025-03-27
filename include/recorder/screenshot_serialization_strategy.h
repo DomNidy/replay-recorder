@@ -67,6 +67,11 @@ class FilePathSerializationStrategy : public ScreenshotSerializationStrategy
 class Base64SerializationStrategy : public ScreenshotSerializationStrategy
 {
   public:
+    ~Base64SerializationStrategy()
+    {
+        LOG_CLASS_DEBUG("Base64SerializationStrategy", "Destructor called");
+    }
+    
     virtual bool serializeScreenshot(const ScreenshotEventSource *source, EventSink *sink, const BYTE *imageData,
                                      int width, int height, int channels) const override;
 

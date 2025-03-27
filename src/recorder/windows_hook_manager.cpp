@@ -14,8 +14,13 @@ LRESULT CALLBACK Replay::Windows::WindowsHookManager::KeyboardProc(int nCode, WP
         assert(keyboardInputObserverClassData != nullptr && "Failed to find keyboard input observer class data entry");
 
         // Push the event payload to the event queue
-        keyboardInputObserverClassData->eventQueue.emplace(std::make_tuple(eventData));
-        keyboardInputObserverClassData->eventQueueConditionVariable.notify_one();
+        // TODO: I don't really know if we need to still lock the mutex here. It seems like the answer is yes, perhaps
+        // because non-atomic pushing could lead to undefined behavior? It's not ideal, but might be necessary.
+        {
+            std::lock_guard<std::mutex> lock(keyboardInputObserverClassData->eventQueueMutex);
+            keyboardInputObserverClassData->eventQueue.emplace(std::make_tuple(eventData));
+            keyboardInputObserverClassData->eventQueueConditionVariable.notify_one();
+        }
     }
 
     return CallNextHookEx(NULL, nCode, wParam, lParam);
@@ -31,8 +36,12 @@ void CALLBACK Replay::Windows::WindowsHookManager::WinEventProc(HWINEVENTHOOK hW
             WindowsHookManager::getInstance().getObserverClassDataEntry<FocusObserver, HWND>();
         assert(focusObserverClassData != nullptr);
 
-        focusObserverClassData->eventQueue.emplace(std::make_tuple(hwnd));
-        focusObserverClassData->eventQueueConditionVariable.notify_one();
+        // Push the event payload to the event queue
+        {
+            std::lock_guard<std::mutex> lock(focusObserverClassData->eventQueueMutex);
+            focusObserverClassData->eventQueue.emplace(std::make_tuple(hwnd));
+            focusObserverClassData->eventQueueConditionVariable.notify_one();
+        }
     }
 }
 

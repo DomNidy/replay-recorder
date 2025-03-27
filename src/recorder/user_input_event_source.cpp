@@ -6,7 +6,11 @@
 
 UserInputEventSource::~UserInputEventSource()
 {
-    LOG_CLASS_DEBUG("UserInputEventSource", "Destructor called in thread {}", GetCurrentThreadId());
+    LOG_CLASS_DEBUG("UserInputEventSource", "Destructor called");
+    LOG_CLASS_DEBUG("UserInputEventSource", "Uninitializing in thread {}", GetCurrentThreadId());
+    Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::KeyboardInputObserver>(
+        shared_from_this());
+    LOG_CLASS_INFO("UserInputEventSource", "Successfully uninstalled keyboard hook");
 }
 
 void UserInputEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
@@ -21,14 +25,6 @@ void UserInputEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
         shared_from_this());
 
     LOG_CLASS_INFO("UserInputEventSource", "Successfully installed keyboard hook");
-}
-
-void UserInputEventSource::uninitializeSource()
-{
-    LOG_CLASS_DEBUG("UserInputEventSource", "Uninitializing in thread {}", GetCurrentThreadId());
-    Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::KeyboardInputObserver>(
-        shared_from_this());
-    LOG_CLASS_INFO("UserInputEventSource", "Successfully uninstalled keyboard hook");
 }
 
 bool handleSpecialKey(int vkCode, EventSink* outputSink)

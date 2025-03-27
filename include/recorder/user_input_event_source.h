@@ -22,7 +22,6 @@ class UserInputEventSource : public EventSource,
   private:
     //~ Begin EventSource interface
     virtual void initializeSource(std::weak_ptr<EventSink> inSink) override;
-    virtual void uninitializeSource() override;
     //~ End EventSource interface
 
     //~ Begin KeyboardInputObserver interface
