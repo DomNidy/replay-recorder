@@ -5,22 +5,27 @@
 #include <sstream>
 
 #include "event_sink.h"
+#include "utils/error_messages.h"
 #include "utils/logging.h"
 #include "utils/timestamp_utils.h"
+
 
 UserWindowActivityEventSource::~UserWindowActivityEventSource()
 {
     LOG_CLASS_DEBUG("UserWindowActivityEventSource", "Destructor called");
-    
-    try {
+
+    try
+    {
         // Get a shared_ptr to this object if possible
         auto self = shared_from_this();
         // Only unregister if we could get a valid shared_ptr
         Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::FocusObserver>(self);
         LOG_CLASS_INFO("UserWindowActivityEventSource", "Successfully unregistered from WindowsHookManager");
-    } catch (const std::bad_weak_ptr&) {
+    }
+    catch (const std::bad_weak_ptr&)
+    {
         // This happens if the object is being destroyed but no shared_ptr to it exists anymore
-        LOG_CLASS_WARN("UserWindowActivityEventSource", "Could not unregister observer - object no longer owned by shared_ptr");
+        LOG_CLASS_WARN("UserWindowActivityEventSource", "{}", RP::ErrorMessages::OBSERVER_UNREGISTER_FAILED);
     }
 }
 
@@ -29,7 +34,7 @@ void UserWindowActivityEventSource::initializeSource(std::shared_ptr<EventSink> 
     outputSink = inSink;
     if (!inSink)
     {
-        throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
+        throw std::runtime_error(RP::ErrorMessages::INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
 
     LOG_CLASS_DEBUG("UserWindowActivityEventSource", "initializeSource called");

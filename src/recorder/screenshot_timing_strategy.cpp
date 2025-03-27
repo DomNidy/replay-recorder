@@ -4,6 +4,7 @@
 #include <vector>
 #include "screenshot_event_source.h"
 #include "utils/logging.h"
+#include "utils/error_messages.h"
 
 bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction()
 {
@@ -86,8 +87,15 @@ void WindowChangeScreenshotTimingStrategy::onFocusChange(HWND hwnd)
 WindowChangeScreenshotTimingStrategy::~WindowChangeScreenshotTimingStrategy()
 {
     LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy", "Destructor called, trying to unregister hook...");
-    Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::FocusObserver>(
-        shared_from_this());
+    try
+    {
+        auto self = shared_from_this();
+        Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::FocusObserver>(self);
+    }
+    catch (const std::bad_weak_ptr&)
+    {
+        LOG_CLASS_WARN("WindowChangeScreenshotTimingStrategy", "{}", RP::ErrorMessages::OBSERVER_UNREGISTER_FAILED);
+    }
 }
 
 uint32_t ScreenshotTimingStrategy::getLastInputTime() const

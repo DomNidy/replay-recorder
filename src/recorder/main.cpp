@@ -75,9 +75,5 @@ int main(int argc, char** argv)
         }
     }
 
-    // Print ref counts of all event sources
     LOG_DEBUG("--- Shutting down... ---");
-    LOG_DEBUG("InputEventSource ref count: {}", inputEventSource.use_count());
-    LOG_DEBUG("WindowActivityEventSource ref count: {}", windowActivityEventSource.use_count());
-    LOG_DEBUG("ScreenshotEventSource ref count: {}", screenshotEventSource.use_count());
 }

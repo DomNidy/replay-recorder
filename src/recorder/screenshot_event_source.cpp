@@ -38,7 +38,7 @@ void ScreenshotEventSource::initializeSource(std::shared_ptr<EventSink> inSink)
 
     if (!inSink)
     {
-        throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
+        throw std::runtime_error(RP::ErrorMessages::INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
     outputSink = inSink;
 

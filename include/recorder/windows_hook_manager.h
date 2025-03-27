@@ -371,16 +371,9 @@ class WindowsHookManager
     template <typename ConcreteObserver, typename... EventData>
     ObserverClassData<ConcreteObserver, EventData...>* getObserverClassDataEntry()
     {
-
-        LOG_CLASS_DEBUG("WindowsHookManager", "Getting observer class data entry for type {}",
-                        typeid(ConcreteObserver).name());
-        // ERROR: This throws read access violation
-        // this->_Vec._Mypair._Myval2._Myfirst was 0x11101110111015A.
         auto it = observerClassData.find(typeid(ConcreteObserver));
         if (it != observerClassData.end())
         {
-            LOG_CLASS_DEBUG("WindowsHookManager", "Found observer class data entry for type {}",
-                            typeid(ConcreteObserver).name());
             return dynamic_cast<ObserverClassData<ConcreteObserver, EventData...>*>(it->second.get());
         }
         return nullptr;

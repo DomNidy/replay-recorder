@@ -2,9 +2,7 @@
 
 #include <iostream>
 #include <memory>
-
-#define RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK                                                                     \
-    "initializeSource() was called with inSink == nullptr, Need an EventSink to initialize a source!"
+#include "utils/error_messages.h"
 
 class EventSink;
 class EventSource

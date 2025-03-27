@@ -3,6 +3,7 @@
 #include <string>
 #include "event_sink.h"
 #include "utils/logging.h"
+#include "utils/error_messages.h"
 
 UserInputEventSource::~UserInputEventSource()
 {
@@ -21,11 +22,7 @@ UserInputEventSource::~UserInputEventSource()
     catch (const std::bad_weak_ptr&)
     {
         // This happens if the object is being destroyed but no shared_ptr to it exists anymore
-        LOG_CLASS_WARN("UserInputEventSource",
-                       "Could not unregister observer from WindowsHookManager - object no longer owned by shared_ptr. "
-                       "This happens when the destructors for WindowsHookManager and the ObserverClassData run first "
-                       "and end up decrementing the ref count to 0. This is weird I should re-evaluate my usage of "
-                       "unregisterObserver(). Warning so I remember to fix this.");
+        LOG_CLASS_WARN("UserInputEventSource", "{}", RP::ErrorMessages::OBSERVER_UNREGISTER_FAILED);
     }
 }
 
@@ -34,7 +31,7 @@ void UserInputEventSource::initializeSource(std::shared_ptr<EventSink> inSink)
     outputSink = inSink;
     if (!inSink)
     {
-        throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
+        throw std::runtime_error(RP::ErrorMessages::INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
 
     Replay::Windows::WindowsHookManager::getInstance().registerObserver<Replay::Windows::KeyboardInputObserver>(
