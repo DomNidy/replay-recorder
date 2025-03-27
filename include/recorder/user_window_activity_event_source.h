@@ -25,10 +25,10 @@ class UserWindowActivityEventSource : public EventSource,
     //~ End Replay::Windows::FocusObserver interface
 
     //~ Begin EventSource interface
-    virtual void initializeSource(std::weak_ptr<EventSink> inSink) override;
+    virtual void initializeSource(std::shared_ptr<EventSink> inSink) override;
     //~ End EventSource interface
 
   private:
-    std::weak_ptr<EventSink> outputSink;
+    std::shared_ptr<EventSink> outputSink;
     bool getWindowTitle(HWND hWindow, std::string& destStr);
 };

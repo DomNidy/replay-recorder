@@ -55,12 +55,11 @@ class ScreenshotEventSource : public EventSource
 
   private:
     //~ Begin EventSource interfacej
-    virtual void initializeSource(std::weak_ptr<EventSink> inSink) override;
-    //~ End EventSource interface
+    virtual void initializeSource(std::shared_ptr<EventSink> inSink) override;
+    //~ End EventSource interface  private:
 
-  private:
     // Reference to the event sink where screenshots will be sent
-    std::weak_ptr<EventSink> outputSink;
+    std::shared_ptr<EventSink> outputSink;
 
     // Whether or not the screenshotThread is currently capturing screenshots
     std::atomic<bool> isRunning;

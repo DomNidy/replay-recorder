@@ -169,6 +169,13 @@ class WindowsHookManager
                 eventQueueConditionVariable.notify_one();
             }
 
+            // Print ref count and class of each observer
+            for (auto& observer : observers)
+            {
+                LOG_CLASS_DEBUG("ObserverClassData", "Observer ref count: {}", observer.use_count());
+                LOG_CLASS_DEBUG("ObserverClassData", "Observer class: {}", typeid(*observer).name());
+            }
+
             // Join the thread if it's joinable
             if (eventLoopThread.joinable())
             {

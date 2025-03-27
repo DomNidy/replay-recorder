@@ -8,15 +8,31 @@ UserInputEventSource::~UserInputEventSource()
 {
     LOG_CLASS_DEBUG("UserInputEventSource", "Destructor called");
     LOG_CLASS_DEBUG("UserInputEventSource", "Uninitializing in thread {}", GetCurrentThreadId());
-    Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::KeyboardInputObserver>(
-        shared_from_this());
-    LOG_CLASS_INFO("UserInputEventSource", "Successfully uninstalled keyboard hook");
+
+    try
+    {
+        // Get a shared_ptr to this object if possible
+        auto self = shared_from_this();
+        // Only unregister if we could get a valid shared_ptr
+        Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::KeyboardInputObserver>(
+            self);
+        LOG_CLASS_INFO("UserInputEventSource", "Successfully uninstalled keyboard hook");
+    }
+    catch (const std::bad_weak_ptr&)
+    {
+        // This happens if the object is being destroyed but no shared_ptr to it exists anymore
+        LOG_CLASS_WARN("UserInputEventSource",
+                       "Could not unregister observer from WindowsHookManager - object no longer owned by shared_ptr. "
+                       "This happens when the destructors for WindowsHookManager and the ObserverClassData run first "
+                       "and end up decrementing the ref count to 0. This is weird I should re-evaluate my usage of "
+                       "unregisterObserver(). Warning so I remember to fix this.");
+    }
 }
 
-void UserInputEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
+void UserInputEventSource::initializeSource(std::shared_ptr<EventSink> inSink)
 {
     outputSink = inSink;
-    if (outputSink.expired())
+    if (!inSink)
     {
         throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
@@ -60,8 +76,7 @@ bool handleSpecialKey(int vkCode, EventSink* outputSink)
 
 void UserInputEventSource::onKeyboardInput(Replay::Windows::KeyboardInputEventData eventData)
 {
-    auto lockedSink = outputSink.lock();
-    assert(lockedSink != nullptr &&
+    assert(outputSink != nullptr &&
            "UserInputEventSource::onKeyboardInput ran, but outputSink was nullptr. This should "
            "never happen, as the outputSink should be set to a valid EventSink when the hook is installed.");
 
@@ -85,7 +100,7 @@ void UserInputEventSource::onKeyboardInput(Replay::Windows::KeyboardInputEventDa
                 // false
                 if (!leftAltPressed)
                 {
-                    *lockedSink << "[TAB]";
+                    *outputSink << "[TAB]";
                     tabPressed = false;
                 }
                 else
@@ -97,17 +112,17 @@ void UserInputEventSource::onKeyboardInput(Replay::Windows::KeyboardInputEventDa
             // Handle ALT+TAB
             if (leftAltPressed && tabPressed)
             {
-                *lockedSink << "[ALT+TAB]";
+                *outputSink << "[ALT+TAB]";
             }
             // Handle special key or everything else
-            else if (!handleSpecialKey(pKeyboard->vkCode, lockedSink.get()))
+            else if (!handleSpecialKey(pKeyboard->vkCode, outputSink.get()))
             {
                 // If we get here and alt is pressed, that means that left alt was/is
                 // pressed, and the key that followed it was not TAB, so we'll just
                 // treat it as another combination (this is scuffed)
                 if (leftAltPressed)
                 {
-                    *lockedSink << "[ALT]";
+                    *outputSink << "[ALT]";
                 }
 
                 wchar_t unicodeBuffer[2] = {0};
@@ -147,7 +162,7 @@ void UserInputEventSource::onKeyboardInput(Replay::Windows::KeyboardInputEventDa
                     // If all of the chars were printable, then send them to output sink
                     if (i == len)
                     {
-                        *lockedSink << unicodeBuffer;
+                        *outputSink << unicodeBuffer;
                     }
                 }
             }

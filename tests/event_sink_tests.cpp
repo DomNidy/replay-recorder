@@ -76,7 +76,7 @@ TEST_F(EventSinkTest, AddsSourcesCorrectly)
     class SomeEventSource : public EventSource
     {
       private:
-        virtual void initializeSource(std::weak_ptr<EventSink> inSink)
+        virtual void initializeSource(std::shared_ptr<EventSink> inSink)
         {
             testInitVal = 1;
         }

@@ -11,16 +11,23 @@
 UserWindowActivityEventSource::~UserWindowActivityEventSource()
 {
     LOG_CLASS_DEBUG("UserWindowActivityEventSource", "Destructor called");
-    Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::FocusObserver>(
-        shared_from_this());
-
-    LOG_CLASS_INFO("UserWindowActivityEventSource", "Successfully unregistered from WindowsHookManager");
+    
+    try {
+        // Get a shared_ptr to this object if possible
+        auto self = shared_from_this();
+        // Only unregister if we could get a valid shared_ptr
+        Replay::Windows::WindowsHookManager::getInstance().unregisterObserver<Replay::Windows::FocusObserver>(self);
+        LOG_CLASS_INFO("UserWindowActivityEventSource", "Successfully unregistered from WindowsHookManager");
+    } catch (const std::bad_weak_ptr&) {
+        // This happens if the object is being destroyed but no shared_ptr to it exists anymore
+        LOG_CLASS_WARN("UserWindowActivityEventSource", "Could not unregister observer - object no longer owned by shared_ptr");
+    }
 }
 
-void UserWindowActivityEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
+void UserWindowActivityEventSource::initializeSource(std::shared_ptr<EventSink> inSink)
 {
     outputSink = inSink;
-    if (outputSink.expired())
+    if (!inSink)
     {
         throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
@@ -51,7 +58,7 @@ void UserWindowActivityEventSource::onFocusChange(HWND hwnd)
             oss << "\n"
                 << WINDOW_CHANGE_TOKEN << "\"" << windowTitle << "\" TIMESTAMP: " << timestampString
                 << WINDOW_CHANGE_END_TOKEN << "\n";
-            *outputSink.lock() << oss.str().data();
+            *outputSink << oss.str().data();
         }
     }
 }

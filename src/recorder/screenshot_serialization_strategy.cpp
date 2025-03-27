@@ -8,13 +8,12 @@
 #include "screenshot_event_source.h"
 #include "utils/logging.h"
 
-
 // Base64 encoding table
 static const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                    "abcdefghijklmnopqrstuvwxyz"
                                    "0123456789+/";
 
-std::string Base64SerializationStrategy::encodeBase64(const BYTE *data, size_t dataLength) const
+std::string Base64SerializationStrategy::encodeBase64(const BYTE* data, size_t dataLength) const
 {
     std::string encoded;
     encoded.reserve((dataLength + 2) / 3 * 4); // Reserve space for the base64 output
@@ -39,9 +38,9 @@ std::string Base64SerializationStrategy::encodeBase64(const BYTE *data, size_t d
 }
 
 // FilePathSerializationStrategy implementation
-bool FilePathSerializationStrategy::serializeScreenshot(const ScreenshotEventSource *source, EventSink *sink,
-                                                        const BYTE *imageData, int width, int height,
-                                                        int channels) const
+bool FilePathSerializationStrategy::serializeScreenshot(const ScreenshotEventSource* source,
+                                                        std::shared_ptr<EventSink> sink, const BYTE* imageData,
+                                                        int width, int height, int channels) const
 {
     if (!sink || !source)
     {
@@ -67,8 +66,9 @@ bool FilePathSerializationStrategy::serializeScreenshot(const ScreenshotEventSou
 }
 
 // Base64SerializationStrategy implementation
-bool Base64SerializationStrategy::serializeScreenshot(const ScreenshotEventSource *source, EventSink *sink,
-                                                      const BYTE *imageData, int width, int height, int channels) const
+bool Base64SerializationStrategy::serializeScreenshot(const ScreenshotEventSource* source,
+                                                      std::shared_ptr<EventSink> sink, const BYTE* imageData, int width,
+                                                      int height, int channels) const
 {
     if (!sink || !imageData)
     {
@@ -90,7 +90,7 @@ bool Base64SerializationStrategy::serializeScreenshot(const ScreenshotEventSourc
 
 // Helper method to save screenshot to file
 std::string FilePathSerializationStrategy::saveScreenshotToFile(std::filesystem::path outputDirectory,
-                                                                const BYTE *imageData, int width, int height,
+                                                                const BYTE* imageData, int width, int height,
                                                                 int channels) const
 {
     if (!imageData)

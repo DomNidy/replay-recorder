@@ -26,23 +26,17 @@ EventSink::~EventSink()
     sources.clear();
 }
 
-void EventSink::addSource(std::shared_ptr<EventSource> source)
+void EventSink::addSource(std::weak_ptr<EventSource> source)
 {
     // Initialize the source with a pointer to this EventSink
-    LOG_CLASS_DEBUG("EventSink", "Adding source of {}...", typeid(*source.get()).name());
-    source->initializeSource(shared_from_this());
+    LOG_CLASS_DEBUG("EventSink", "Adding source of {}...", typeid(*source.lock().get()).name());
+    source.lock()->initializeSource(shared_from_this());
     sources.push_back(source);
 }
 
 const std::vector<std::weak_ptr<EventSource>> EventSink::getSources() const
 {
-    std::vector<std::weak_ptr<EventSource>> weakSources;
-    for (const auto& src : sources)
-    {
-        weakSources.push_back(src);
-    }
-
-    return weakSources;
+    return sources;
 }
 
 EventSink& EventSink::operator<<(const char* data)

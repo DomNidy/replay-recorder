@@ -7,14 +7,13 @@
 #include "screenshot_timing_strategy.h"
 #include "utils/logging.h"
 
-ScreenshotEventSource::ScreenshotEventSource() : outputSink(std::weak_ptr<EventSink>()), isRunning(false)
+ScreenshotEventSource::ScreenshotEventSource() : outputSink(nullptr), isRunning(false)
 {
 }
 
 ScreenshotEventSource::~ScreenshotEventSource()
 {
-    LOG_CLASS_DEBUG("ScreenshotEventSource", "Destructor called");
-    LOG_CLASS_DEBUG("ScreenshotEventSource", "Uninitializing in thread {}", GetCurrentThreadId());
+    LOG_CLASS_DEBUG("ScreenshotEventSource", "Destructor called. Running on thread {}", GetCurrentThreadId());
     if (isRunning)
     {
         isRunning = false;
@@ -31,13 +30,13 @@ ScreenshotEventSource::~ScreenshotEventSource()
     }
 }
 
-void ScreenshotEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
+void ScreenshotEventSource::initializeSource(std::shared_ptr<EventSink> inSink)
 {
     assert(timingStrategy &&
            "Screenshot timing strategy not set! This should never happen because the ScreenshotEventSourceBuilder "
            "should always set it up (and we should only create ScreenshotEventSource with the builder)");
 
-    if (inSink.expired())
+    if (!inSink)
     {
         throw std::runtime_error(RP_ERR_INITIALIZED_WITH_NULLPTR_EVENT_SINK);
     }
@@ -48,7 +47,7 @@ void ScreenshotEventSource::initializeSource(std::weak_ptr<EventSink> inSink)
 
     // Start up the screenshot thread and pass it a pointer to the captureScreenshot method, binding it to this
     // ScreenshotEventSource
-    screenshotThread = std::thread(&ScreenshotTimingStrategy::screenshotThreadFunction, timingStrategy.get(), this);
+    screenshotThread = std::thread(&ScreenshotTimingStrategy::screenshotThreadFunction, timingStrategy.get());
 
     LOG_CLASS_INFO("ScreenshotEventSource", "Successfully initialized");
 }
@@ -84,8 +83,7 @@ std::optional<MONITORINFO> ScreenshotEventSource::getFocusedMonitorInfo()
 bool ScreenshotEventSource::captureScreenshot()
 {
     // Lock sink so we can use it to prevent it from getting destroyed while we're using it
-    auto lockedSink = outputSink.lock();
-    if (!lockedSink)
+    if (!outputSink)
     {
         LOG_CLASS_WARN(
             "ScreenshotEventSource",
@@ -229,8 +227,7 @@ bool ScreenshotEventSource::captureScreenshot()
     // Use the serialization strategy to process the screenshot
     if (serializationStrategy)
     {
-        result =
-            serializationStrategy->serializeScreenshot(this, lockedSink.get(), rgbData, monitorWidth, monitorHeight, 3);
+        result = serializationStrategy->serializeScreenshot(this, outputSink, rgbData, monitorWidth, monitorHeight, 3);
     }
     else
     {
@@ -283,16 +280,21 @@ std::shared_ptr<ScreenshotEventSource> ScreenshotEventSourceBuilder::build()
 
     auto source = std::make_shared<ScreenshotEventSource>();
 
-    // Give source a pointer to its timing strategy to use
-
+    // TODO: Make this code cleaner
     // If our timing strategy was WindowChangeScreenshotTimingStrategy
     if (auto windowChangeTimingStrategy =
             std::dynamic_pointer_cast<WindowChangeScreenshotTimingStrategy>(timingStrategy))
     {
         LOG_CLASS_DEBUG("ScreenshotEventSourceBuilder", "Setting timing strategy to window change");
-        // TODO: Review this code and prob make it use weak ptr
         source->timingStrategy = windowChangeTimingStrategy;
-        windowChangeTimingStrategy->source = source.get();
+        windowChangeTimingStrategy->source = source;
+    }
+    else if (auto fixedIntervalTimingStrategy =
+                 std::dynamic_pointer_cast<FixedIntervalScreenshotTimingStrategy>(timingStrategy))
+    {
+        LOG_CLASS_DEBUG("ScreenshotEventSourceBuilder", "Setting timing strategy to fixed interval");
+        source->timingStrategy = fixedIntervalTimingStrategy;
+        fixedIntervalTimingStrategy->source = source;
     }
 
     switch (serializationStrategyType)

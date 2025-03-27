@@ -26,7 +26,7 @@ class ScreenshotTimingStrategy
     }
     ScreenshotTimingStrategy() = default;
 
-    virtual bool screenshotThreadFunction(ScreenshotEventSource* source) = 0;
+    virtual bool screenshotThreadFunction() = 0;
 
   protected:
     // Get the time of the last input event
@@ -81,7 +81,7 @@ class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy,
     virtual ~WindowChangeScreenshotTimingStrategy();
 
     //~ Begin ScreenshotTimingStrategy interface
-    virtual bool screenshotThreadFunction(ScreenshotEventSource* source) override;
+    virtual bool screenshotThreadFunction() override;
     //~ End ScreenshotTimingStrategy interface
 
   private:
@@ -91,8 +91,7 @@ class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy,
 
   private:
     // Pointer to the source that is capturing screenshots
-    // Raw ptr, so be careful to check before using
-    std::optional<ScreenshotEventSource*> source;
+    std::weak_ptr<ScreenshotEventSource> source;
 
   private:
     // Time between interval screenshots (for the fixed interval backup strategy)
@@ -116,19 +115,22 @@ class WindowChangeScreenshotTimingStrategy : public ScreenshotTimingStrategy,
 // Take a screenshot every N seconds with a configurable idle timeout
 class FixedIntervalScreenshotTimingStrategy : public ScreenshotTimingStrategy
 {
+    friend class ScreenshotEventSourceBuilder; // needs to update source ptr
   public:
     FixedIntervalScreenshotTimingStrategy(uint32_t intervalSeconds = 60, uint32_t pauseAfterIdleSeconds = 60)
         : intervalSeconds(intervalSeconds), pauseAfterIdleSeconds(pauseAfterIdleSeconds)
     {
     }
-    
+
     ~FixedIntervalScreenshotTimingStrategy()
     {
         LOG_CLASS_DEBUG("FixedIntervalScreenshotTimingStrategy", "Destructor called");
     }
 
+    std::weak_ptr<ScreenshotEventSource> source;
+
     //~ Begin ScreenshotTimingStrategy interface
-    virtual bool screenshotThreadFunction(ScreenshotEventSource* source) override;
+    virtual bool screenshotThreadFunction() override;
     //~ End ScreenshotTimingStrategy interface
 
   private:

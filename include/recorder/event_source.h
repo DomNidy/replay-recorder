@@ -26,5 +26,5 @@ class EventSource
     /**
      * Called by EventSink to add an EventSource
      */
-    virtual void initializeSource(std::weak_ptr<EventSink> inSink) = 0;
+    virtual void initializeSource(std::shared_ptr<EventSink> inSink) = 0;
 };

@@ -21,7 +21,7 @@ class UserInputEventSource : public EventSource,
 
   private:
     //~ Begin EventSource interface
-    virtual void initializeSource(std::weak_ptr<EventSink> inSink) override;
+    virtual void initializeSource(std::shared_ptr<EventSink> inSink) override;
     //~ End EventSource interface
 
     //~ Begin KeyboardInputObserver interface
@@ -35,7 +35,7 @@ class UserInputEventSource : public EventSource,
 
   private:
     // The EventSink that registered us and we should write to
-    std::weak_ptr<EventSink> outputSink;
+    std::shared_ptr<EventSink> outputSink;
 
     // Enumerate all processes on the Windows system
     void enumerateWindowsProcesses() const;

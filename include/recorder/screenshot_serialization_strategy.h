@@ -13,9 +13,9 @@
 class ScreenshotEventSource;
 
 // Tokens to identify screenshot data in the event stream
-constexpr const wchar_t *SCREENSHOT_PATH_TOKEN = L"[SCREENSHOT_PATH]";
-constexpr const wchar_t *SCREENSHOT_BASE64_TOKEN = L"[SCREENSHOT_BASE64]";
-constexpr const wchar_t *SCREENSHOT_END_TOKEN = L"[/SCREENSHOT]";
+constexpr const wchar_t* SCREENSHOT_PATH_TOKEN = L"[SCREENSHOT_PATH]";
+constexpr const wchar_t* SCREENSHOT_BASE64_TOKEN = L"[SCREENSHOT_BASE64]";
+constexpr const wchar_t* SCREENSHOT_END_TOKEN = L"[/SCREENSHOT]";
 
 // Specifies the strategy for serializing screenshots
 // FilePath: Save the screenshot to a file and send the file path to the event sink.
@@ -36,8 +36,8 @@ class ScreenshotSerializationStrategy
     virtual ~ScreenshotSerializationStrategy() = default;
 
     // Serialize the screenshot and send it to the event sink
-    virtual bool serializeScreenshot(const ScreenshotEventSource *source, EventSink *sink, const BYTE *imageData,
-                                     int width, int height, int channels) const = 0;
+    virtual bool serializeScreenshot(const ScreenshotEventSource* source, std::shared_ptr<EventSink> sink,
+                                     const BYTE* imageData, int width, int height, int channels) const = 0;
 };
 
 // Strategy to save screenshot to file and send the file path to the event sink
@@ -53,10 +53,10 @@ class FilePathSerializationStrategy : public ScreenshotSerializationStrategy
         LOG_CLASS_DEBUG("FilePathSerializationStrategy", "Destructor called");
     }
 
-    virtual bool serializeScreenshot(const ScreenshotEventSource *source, EventSink *sink, const BYTE *imageData,
-                                     int width, int height, int channels) const override;
+    virtual bool serializeScreenshot(const ScreenshotEventSource* source, std::shared_ptr<EventSink> sink,
+                                     const BYTE* imageData, int width, int height, int channels) const override;
 
-    std::string saveScreenshotToFile(std::filesystem::path outputDirectory, const BYTE *imageData, int width,
+    std::string saveScreenshotToFile(std::filesystem::path outputDirectory, const BYTE* imageData, int width,
                                      int height, int channels) const;
 
   private:
@@ -71,11 +71,11 @@ class Base64SerializationStrategy : public ScreenshotSerializationStrategy
     {
         LOG_CLASS_DEBUG("Base64SerializationStrategy", "Destructor called");
     }
-    
-    virtual bool serializeScreenshot(const ScreenshotEventSource *source, EventSink *sink, const BYTE *imageData,
-                                     int width, int height, int channels) const override;
+
+    virtual bool serializeScreenshot(const ScreenshotEventSource* source, std::shared_ptr<EventSink> sink,
+                                     const BYTE* imageData, int width, int height, int channels) const override;
 
   private:
     // Helper method to encode binary data to base64
-    std::string encodeBase64(const BYTE *data, size_t dataLength) const;
+    std::string encodeBase64(const BYTE* data, size_t dataLength) const;
 };

@@ -5,16 +5,21 @@
 #include "screenshot_event_source.h"
 #include "utils/logging.h"
 
-bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotEventSource* source)
+bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction()
 {
     LOG_CLASS_INFO("FixedIntervalScreenshotTimingStrategy", "Screenshot timing strategy: Fixed interval");
-    while (source && source->getIsRunning())
+    auto lockedSource = source.lock();
+    if (!lockedSource)
     {
-
+        LOG_CLASS_ERROR("FixedIntervalScreenshotTimingStrategy", "Source is null, cannot capture screenshot");
+        return false;
+    }
+    while (lockedSource && lockedSource->getIsRunning())
+    {
         if (!isIdle(pauseAfterIdleSeconds))
         {
             LOG_CLASS_INFO("FixedIntervalScreenshotTimingStrategy", "Capturing screenshot");
-            source->captureScreenshot();
+            lockedSource->captureScreenshot();
         }
         else
         {
@@ -29,7 +34,7 @@ bool FixedIntervalScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotE
     return true;
 }
 
-bool WindowChangeScreenshotTimingStrategy::screenshotThreadFunction(ScreenshotEventSource* source)
+bool WindowChangeScreenshotTimingStrategy::screenshotThreadFunction()
 {
     LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy",
                     "Screenshot timing strategy screenshotThreadFunction called, trying register ourselves as a "
@@ -48,7 +53,8 @@ void WindowChangeScreenshotTimingStrategy::onFocusChange(HWND hwnd)
 {
     LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy", "Entered window change strategy");
 
-    if (source.has_value())
+    auto lockedSource = source.lock();
+    if (lockedSource)
     {
         // Check if we should debounce the screenshot
         auto timeSinceLastWindowChange = std::chrono::duration_cast<std::chrono::seconds>(
@@ -68,10 +74,11 @@ void WindowChangeScreenshotTimingStrategy::onFocusChange(HWND hwnd)
 
         // do a little delay before ss to ensure it captures the new window
         std::this_thread::sleep_for(windowChangeScreenshotDelaySeconds);
-        if (source.has_value())
-        {
-            source.value()->captureScreenshot();
-        }
+        lockedSource->captureScreenshot();
+    }
+    else
+    {
+        LOG_CLASS_ERROR("WindowChangeScreenshotTimingStrategy", "Source is null, cannot capture screenshot");
     }
     LOG_CLASS_DEBUG("WindowChangeScreenshotTimingStrategy", "onForegroundEvent finished");
 }
