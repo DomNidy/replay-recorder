@@ -42,7 +42,7 @@ TEST_F(EventSinkTest, WritesToFileAndFlushes)
     ASSERT_TRUE(std::filesystem::exists(testFilePath));
 
     // Write some data that's smaller than MAX_RECORDING_BUFFER_SIZE
-    const wchar_t *smallData = L"This is a small test string";
+    const wchar_t* smallData = L"This is a small test string";
     *eventSink << smallData;
 
     // At this point, data should be in the buffer but not yet flushed to file
@@ -67,45 +67,7 @@ TEST_F(EventSinkTest, WritesToFileAndFlushes)
     EXPECT_TRUE(fileContent.find(std::string(100, 'X')) != std::string::npos);
 }
 
-// Test if we correctly add and initialize sources
-TEST_F(EventSinkTest, AddsSourcesCorrectly)
-{
-
-    static int testInitVal = 0;
-    static int testUninitVal = 0;
-    class SomeEventSource : public EventSource
-    {
-      private:
-        virtual void initializeSource(std::shared_ptr<EventSink> inSink)
-        {
-            testInitVal = 1;
-        }
-        virtual void uninitializeSource()
-        {
-            testUninitVal = 1;
-        }
-    };
-
-    auto someEventSource = std::make_shared<SomeEventSource>();
-    auto eventSink = std::make_shared<EventSink>(testFilePath);
-
-    // Ensure that the event sink has no sources
-    size_t numSources = eventSink->getSources().size();
-    ASSERT_EQ(numSources, 0);
-
-    // Test that event sink properly calls initalizeSource on added event sources
-    eventSink->addSource(someEventSource);
-    ASSERT_EQ(testInitVal, 1);
-
-    // Check if the source was added to the sources vector
-    numSources = eventSink->getSources().size();
-    
-    // Check that the source was removed from the sources vector after uninitializing the event sink
-    numSources = eventSink->getSources().size();
-    ASSERT_EQ(numSources, 0);
-}
-
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
 
     ::testing::InitGoogleTest(&argc, argv);

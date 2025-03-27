@@ -19,11 +19,12 @@ class UserInputEventSource : public EventSource,
     UserInputEventSource() = default;
     ~UserInputEventSource();
 
-  private:
+  public:
     //~ Begin EventSource interface
     virtual void initializeSource(std::shared_ptr<EventSink> inSink) override;
     //~ End EventSource interface
 
+  private:
     //~ Begin KeyboardInputObserver interface
     virtual void onKeyboardInput(Replay::Windows::KeyboardInputEventData eventData) override;
     //~ End KeyboardInputObserver interface

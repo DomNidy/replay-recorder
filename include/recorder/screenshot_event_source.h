@@ -53,11 +53,12 @@ class ScreenshotEventSource : public EventSource
     // Returns whether the screenshot thread is currently running
     bool getIsRunning() const;
 
-  private:
-    //~ Begin EventSource interfacej
+  public:
+    //~ Begin EventSource interface
     virtual void initializeSource(std::shared_ptr<EventSink> inSink) override;
-    //~ End EventSource interface  private:
+    //~ End EventSource interface
 
+  private:
     // Reference to the event sink where screenshots will be sent
     std::shared_ptr<EventSink> outputSink;
 

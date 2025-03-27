@@ -19,14 +19,14 @@ class UserWindowActivityEventSource : public EventSource,
     UserWindowActivityEventSource() = default;
     ~UserWindowActivityEventSource();
 
+    //~ Begin EventSource interface
+    virtual void initializeSource(std::shared_ptr<EventSink> inSink) override;
+    //~ End EventSource interface
+
   private:
     //~ Begin Replay::Windows::FocusObserver interface
     void onFocusChange(HWND hwnd) override;
     //~ End Replay::Windows::FocusObserver interface
-
-    //~ Begin EventSource interface
-    virtual void initializeSource(std::shared_ptr<EventSink> inSink) override;
-    //~ End EventSource interface
 
   private:
     std::shared_ptr<EventSink> outputSink;

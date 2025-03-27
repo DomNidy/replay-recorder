@@ -59,10 +59,9 @@ int main(int argc, char** argv)
             .withScreenshotOutputDirectory(std::filesystem::path("./replay-screenshots"))
             .build();
 
-    // Add sources to sink
-    eventSink->addSource(inputEventSource);
-    eventSink->addSource(windowActivityEventSource);
-    eventSink->addSource(screenshotEventSource);
+    inputEventSource->initializeSource(eventSink);
+    windowActivityEventSource->initializeSource(eventSink);
+    screenshotEventSource->initializeSource(eventSink);
 
     BOOL ret;
     MSG msg;

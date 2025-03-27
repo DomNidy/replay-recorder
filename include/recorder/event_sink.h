@@ -30,17 +30,7 @@ class EventSink : public std::enable_shared_from_this<EventSink>
     EventSink& operator<<(const char* data);
     EventSink& operator<<(const wchar_t* data);
 
-    // Add a source to receive events from (e.g., user input events)
-    void addSource(std::weak_ptr<EventSource> source);
-
-    const std::vector<std::weak_ptr<EventSource>> getSources() const;
-
   private:
-    // Vector of weak pointers to event sources
-    // Need to be weak pointers to avoid circular references. Starting to think that maybe this C++ language isn't for
-    // me...
-    std::vector<std::weak_ptr<EventSource>> sources;
-
     // Checks buffer size and calls flushData() it if its too big
     inline void flushIfMaxSizeExceeded();
 
