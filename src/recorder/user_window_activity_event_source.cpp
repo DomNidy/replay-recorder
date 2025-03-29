@@ -9,6 +9,10 @@
 #include "utils/logging.h"
 #include "utils/timestamp_utils.h"
 
+std::shared_ptr<UserWindowActivityEventSource> UserWindowActivityEventSource::create()
+{
+    return std::shared_ptr<UserWindowActivityEventSource>(new UserWindowActivityEventSource());
+}
 
 UserWindowActivityEventSource::~UserWindowActivityEventSource()
 {

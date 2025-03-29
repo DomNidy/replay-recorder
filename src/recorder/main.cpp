@@ -43,14 +43,11 @@ int main(int argc, char** argv)
     std::signal(SIGINT, signalHandler);
 
     // Initialize the windows hook manager (should be done before creating any event sources and in the main thread)
-    Replay::Windows::WindowsHookManager::getInstance();
-
-    // Initialize event sink
     auto eventSink = std::make_shared<EventSink>("out.txt");
 
     // Create EventSources to monitor user activity
-    auto inputEventSource = std::make_shared<UserInputEventSource>();
-    auto windowActivityEventSource = std::make_shared<UserWindowActivityEventSource>();
+    auto inputEventSource = UserInputEventSource::create();
+    auto windowActivityEventSource = UserWindowActivityEventSource::create();
     auto screenshotEventSource =
         ScreenshotEventSourceBuilder()
             .withScreenshotSerializationStrategy(ScreenshotSerializationStrategyType::FilePath)

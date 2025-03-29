@@ -2,8 +2,8 @@
 #include <cassert>
 #include <string>
 #include "event_sink.h"
-#include "utils/logging.h"
 #include "utils/error_messages.h"
+#include "utils/logging.h"
 
 UserInputEventSource::~UserInputEventSource()
 {
@@ -24,6 +24,11 @@ UserInputEventSource::~UserInputEventSource()
         // This happens if the object is being destroyed but no shared_ptr to it exists anymore
         LOG_CLASS_WARN("UserInputEventSource", "{}", RP::ErrorMessages::OBSERVER_UNREGISTER_FAILED);
     }
+}
+
+std::shared_ptr<UserInputEventSource> UserInputEventSource::create()
+{
+    return std::shared_ptr<UserInputEventSource>(new UserInputEventSource());
 }
 
 void UserInputEventSource::initializeSource(std::shared_ptr<EventSink> inSink)

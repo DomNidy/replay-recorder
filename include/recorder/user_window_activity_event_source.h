@@ -16,7 +16,12 @@ class UserWindowActivityEventSource : public EventSource,
                                       public std::enable_shared_from_this<UserWindowActivityEventSource>
 {
   public:
+    static std::shared_ptr<UserWindowActivityEventSource> create();
+
+  protected:
     UserWindowActivityEventSource() = default;
+
+  public:
     ~UserWindowActivityEventSource();
 
     //~ Begin EventSource interface

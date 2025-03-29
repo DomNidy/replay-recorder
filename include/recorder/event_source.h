@@ -4,16 +4,12 @@
 #include <memory>
 #include "utils/error_messages.h"
 
-class EventSink;
 class EventSource
 {
-    friend EventSink;
+    friend class EventSink;
 
   public:
-    EventSource()
-    {
-    }
-    ~EventSource() = default;
+    virtual ~EventSource() = default;
 
     EventSource(const EventSource&) = delete;
     EventSource(EventSource&&) = delete;
@@ -23,4 +19,9 @@ class EventSource
   public:
     // Initialize the source. The passed EventSink can be used to send events to the source
     virtual void initializeSource(std::shared_ptr<EventSink> inSink) = 0;
+
+  protected:
+    // Only allow derived classes to call this
+    // Dervied EventSources should be created through a create factory method
+    explicit EventSource() = default;
 };

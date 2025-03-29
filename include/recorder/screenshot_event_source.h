@@ -45,9 +45,12 @@ class ScreenshotEventSource : public EventSource
     // These classes need access to the captureScreenshot method
     friend class WindowChangeScreenshotTimingStrategy;
     friend class FixedIntervalScreenshotTimingStrategy;
+    friend class ScreenshotEventSourceBuilder;
+
+  protected:
+    ScreenshotEventSource();
 
   public:
-    ScreenshotEventSource();
     ~ScreenshotEventSource();
 
     // Returns whether the screenshot thread is currently running
@@ -59,10 +62,9 @@ class ScreenshotEventSource : public EventSource
     //~ End EventSource interface
 
   private:
-    // Reference to the event sink where screenshots will be sent
     std::shared_ptr<EventSink> outputSink;
 
-    // Whether or not the screenshotThread is currently capturing screenshots
+    // Whether or not the screenshotThread is currently running
     std::atomic<bool> isRunning;
 
     // Captures a screenshot of the focused monitor and serializes it

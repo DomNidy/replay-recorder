@@ -16,13 +16,18 @@ class UserInputEventSource : public EventSource,
                              public std::enable_shared_from_this<UserInputEventSource>
 {
   public:
+    // Factory method
+    static std::shared_ptr<UserInputEventSource> create();
+
+  protected:
     UserInputEventSource() = default;
-    ~UserInputEventSource();
 
   public:
     //~ Begin EventSource interface
     virtual void initializeSource(std::shared_ptr<EventSink> inSink) override;
     //~ End EventSource interface
+
+    ~UserInputEventSource();
 
   private:
     //~ Begin KeyboardInputObserver interface
@@ -35,9 +40,5 @@ class UserInputEventSource : public EventSource,
     bool tabPressed = false;
 
   private:
-    // The EventSink that registered us and we should write to
     std::shared_ptr<EventSink> outputSink;
-
-    // Enumerate all processes on the Windows system
-    void enumerateWindowsProcesses() const;
 };

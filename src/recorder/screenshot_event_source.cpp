@@ -278,7 +278,7 @@ std::shared_ptr<ScreenshotEventSource> ScreenshotEventSourceBuilder::build()
 {
     validate();
 
-    auto source = std::make_shared<ScreenshotEventSource>();
+    auto source = std::shared_ptr<ScreenshotEventSource>(new ScreenshotEventSource());
 
     // TODO: Make this code cleaner
     // If our timing strategy was WindowChangeScreenshotTimingStrategy
